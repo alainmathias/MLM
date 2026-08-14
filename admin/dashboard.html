@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CommunityTree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-functions-compat.js"></script>
+
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .stat-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .sidebar-link {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .sidebar-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        .sidebar-link.active {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            border-right: 3px solid #667eea;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-suspended {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <!-- Configuration Firebase -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const functions = firebase.functions();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-center h-16 border-b">
+                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+            </div>
+            
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <a href="dashboard.html" class="sidebar-link active flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-chart-pie w-5 h-5 mr-3"></i>
+                    Dashboard
+                </a>
+                <a href="membres.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-users w-5 h-5 mr-3"></i>
+                    Membres
+                </a>
+                <a href="#" id="ajouterMembreBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-user-plus w-5 h-5 mr-3"></i>
+                    Ajouter Membre
+                </a>
+                <a href="statistiques.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-chart-bar w-5 h-5 mr-3"></i>
+                    Statistiques
+                </a>
+                <a href="../dashboard.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-arrow-left w-5 h-5 mr-3"></i>
+                    Retour
+                </a>
+                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 mt-8">
+                    <i class="fas fa-sign-out-alt w-5 h-5 mr-3"></i>
+                    Déconnexion
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="md:ml-64">
+        <!-- Top Bar -->
+        <header class="bg-white shadow-sm fixed top-0 right-0 left-0 md:left-64 z-30">
+            <div class="flex items-center justify-between px-4 py-3">
+                <button id="sidebarToggle" class="md:hidden text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600" id="adminName">Admin</span>
+                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold text-sm" id="adminInitial">
+                        A
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="pt-20 px-4 pb-8">
+            <!-- Welcome Banner -->
+            <div class="gradient-bg rounded-2xl p-6 text-white mb-8">
+                <h1 class="text-2xl font-bold">Dashboard Administrateur</h1>
+                <p class="mt-2 opacity-90">Gérez votre communauté</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Total Membres</p>
+                            <p class="text-2xl font-bold text-gray-800" id="totalMembres">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-users text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Membres Actifs</p>
+                            <p class="text-2xl font-bold text-gray-800" id="membresActifs">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-check text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Membres Suspendus</p>
+                            <p class="text-2xl font-bold text-gray-800" id="membresSuspendus">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-slash text-red-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Inscrits aujourd'hui</p>
+                            <p class="text-2xl font-bold text-gray-800" id="inscritsAujourdhui">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-calendar-day text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition">
+                    <i class="fas fa-user-plus text-4xl text-blue-600 mb-3"></i>
+                    <h3 class="font-bold text-gray-800">Ajouter un membre</h3>
+                    <p class="text-sm text-gray-500 mt-1">Inscrire un nouveau membre</p>
+                    <button onclick="window.location.href='membres.html?action=add'" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                        Ajouter
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition">
+                    <i class="fas fa-sitemap text-4xl text-green-600 mb-3"></i>
+                    <h3 class="font-bold text-gray-800">Voir l'arbre</h3>
+                    <p class="text-sm text-gray-500 mt-1">Visualiser l'arbre complet</p>
+                    <button onclick="window.location.href='../arbre.html'" class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
+                        Visualiser
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition">
+                    <i class="fas fa-chart-bar text-4xl text-purple-600 mb-3"></i>
+                    <h3 class="font-bold text-gray-800">Statistiques</h3>
+                    <p class="text-sm text-gray-500 mt-1">Voir les statistiques détaillées</p>
+                    <button onclick="window.location.href='statistiques.html'" class="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm">
+                        Voir
+                    </button>
+                </div>
+            </div>
+
+            <!-- Derniers membres -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">Derniers membres inscrits</h2>
+                <div id="derniersMembres" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Chargement...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Ajouter Membre -->
+    <div id="addMemberModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Ajouter un membre</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="adminAddForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nom *</label>
+                        <input type="text" id="adminNom" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Prénom *</label>
+                        <input type="text" id="adminPrenom" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Téléphone *</label>
+                    <input type="tel" id="adminTelephone" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email *</label>
+                    <input type="email" id="adminEmail" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Mot de passe *</label>
+                    <input type="password" id="adminPassword" required minlength="8" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Code du parrain *</label>
+                    <input type="text" id="adminCodeParrain" placeholder="Ex: MB000001" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <p class="mt-1 text-xs text-gray-500">Le membre sera placé automatiquement sous le parrain</p>
+                </div>
+                <div id="adminError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+                <div id="adminSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm"></div>
+                <button type="submit" id="adminSubmitBtn" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition">
+                    <i class="fas fa-spinner fa-spin hidden mr-2" id="adminLoading"></i>
+                    <span id="adminBtnText">Ajouter le membre</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let isAdmin = false;
+
+        // Sidebar toggle
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+
+        // Déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            auth.signOut().then(() => {
+                window.location.href = '../connexion.html';
+            });
+        });
+
+        // Ouvrir le modal
+        document.getElementById('ajouterMembreBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            openModal();
+        });
+
+        function openModal() {
+            document.getElementById('addMemberModal').classList.remove('hidden');
+            document.getElementById('adminAddForm').reset();
+            document.getElementById('adminError').classList.add('hidden');
+            document.getElementById('adminSuccess').classList.add('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('addMemberModal').classList.add('hidden');
+        }
+
+        // Fermer le modal en cliquant en dehors
+        document.getElementById('addMemberModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Soumission du formulaire admin
+        document.getElementById('adminAddForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const nom = document.getElementById('adminNom').value.trim();
+            const prenom = document.getElementById('adminPrenom').value.trim();
+            const telephone = document.getElementById('adminTelephone').value.trim();
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value;
+            const codeParrain = document.getElementById('adminCodeParrain').value.trim();
+
+            const errorDiv = document.getElementById('adminError');
+            const successDiv = document.getElementById('adminSuccess');
+            const submitBtn = document.getElementById('adminSubmitBtn');
+            const loading = document.getElementById('adminLoading');
+            const btnText = document.getElementById('adminBtnText');
+
+            // Validation
+            if (!nom || !prenom || !telephone || !email || !password || !codeParrain) {
+                errorDiv.textContent = 'Tous les champs sont obligatoires';
+                errorDiv.classList.remove('hidden');
+                successDiv.classList.add('hidden');
+                return;
+            }
+
+            if (password.length < 8) {
+                errorDiv.textContent = 'Le mot de passe doit contenir au moins 8 caractères';
+                errorDiv.classList.remove('hidden');
+                successDiv.classList.add('hidden');
+                return;
+            }
+
+            // Désactiver le bouton
+            loading.classList.remove('hidden');
+            btnText.textContent = 'Ajout en cours...';
+            submitBtn.disabled = true;
+            errorDiv.classList.add('hidden');
+
+            try {
+                // Appeler la Cloud Function
+                const inscrireMembre = functions.httpsCallable('inscrireMembre');
+                const result = await inscrireMembre({
+                    nom,
+                    prenom,
+                    telephone,
+                    email,
+                    password,
+                    codeParrain: codeParrain
+                });
+
+                if (result.data.success) {
+                    successDiv.textContent = '✅ Membre ajouté avec succès ! Code: ' + result.data.codeMembre;
+                    successDiv.classList.remove('hidden');
+                    errorDiv.classList.add('hidden');
+                    
+                    // Réinitialiser le formulaire
+                    document.getElementById('adminAddForm').reset();
+                    
+                    // Recharger les stats
+                    loadStats();
+                    
+                    // Fermer le modal après 2 secondes
+                    setTimeout(() => {
+                        closeModal();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                let message = 'Erreur lors de l\'ajout du membre';
+                if (error.message.includes('already-exists')) {
+                    message = 'Cet email est déjà utilisé';
+                } else if (error.message.includes('not-found')) {
+                    message = 'Code parrain inexistant';
+                } else if (error.message.includes('invalid-argument')) {
+                    message = 'Données invalides';
+                }
+                errorDiv.textContent = '❌ ' + message;
+                errorDiv.classList.remove('hidden');
+                successDiv.classList.add('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                btnText.textContent = 'Ajouter le membre';
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Charger les statistiques
+        async function loadStats() {
+            try {
+                const snapshot = await db.collection('users').get();
+                let total = 0;
+                let actifs = 0;
+                let suspendus = 0;
+                let aujourdhui = 0;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    total++;
+                    
+                    if (data.statut === 'actif') actifs++;
+                    if (data.statut === 'suspendu') suspendus++;
+                    
+                    if (data.dateInscription) {
+                        const date = data.dateInscription.toDate ? data.dateInscription.toDate() : new Date(data.dateInscription);
+                        if (date >= today) aujourdhui++;
+                    }
+                });
+
+                document.getElementById('totalMembres').textContent = total;
+                document.getElementById('membresActifs').textContent = actifs;
+                document.getElementById('membresSuspendus').textContent = suspendus;
+                document.getElementById('inscritsAujourdhui').textContent = aujourdhui;
+
+                // Derniers membres
+                const derniers = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.dateInscription) {
+                        derniers.push({
+                            id: doc.id,
+                            ...data,
+                            date: data.dateInscription.toDate ? data.dateInscription.toDate() : new Date(data.dateInscription)
+                        });
+                    }
+                });
+                derniers.sort((a, b) => b.date - a.date);
+                const derniers5 = derniers.slice(0, 5);
+
+                const container = document.getElementById('derniersMembres');
+                if (derniers5.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-4">Aucun membre inscrit</p>';
+                } else {
+                    container.innerHTML = derniers5.map(m => `
+                        <div class="flex items-center justify-between py-2 border-b last:border-0">
+                            <div>
+                                <span class="font-medium">${m.prenom} ${m.nom}</span>
+                                <span class="text-sm text-gray-500 ml-2">${m.codeMembre}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="status-badge ${m.statut === 'actif' ? 'status-active' : 'status-suspended'}">${m.statut}</span>
+                                <span class="text-sm text-gray-500">${m.date.toLocaleDateString('fr-FR')}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (error) {
+                console.error('Erreur chargement stats:', error);
+            }
+        }
+
+        // Vérifier l'authentification et le rôle admin
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = '../connexion.html';
+                return;
+            }
+
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (!userDoc.exists || userDoc.data().role !== 'admin') {
+                    window.location.href = '../dashboard.html';
+                    return;
+                }
+
+                currentUser = user;
+                isAdmin = true;
+                const data = userDoc.data();
+                document.getElementById('adminName').textContent = `${data.prenom} ${data.nom}`;
+                document.getElementById('adminInitial').textContent = data.prenom.charAt(0).toUpperCase();
+                
+                loadStats();
+            } catch (error) {
+                console.error('Erreur vérification admin:', error);
+                window.location.href = '../dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
