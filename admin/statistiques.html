@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiques - CommunityTree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar-link {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .sidebar-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        .sidebar-link.active {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            border-right: 3px solid #667eea;
+        }
+        .stat-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-center h-16 border-b">
+                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+            </div>
+            
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <a href="dashboard.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-chart-pie w-5 h-5 mr-3"></i>
+                    Dashboard
+                </a>
+                <a href="membres.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-users w-5 h-5 mr-3"></i>
+                    Membres
+                </a>
+                <a href="statistiques.html" class="sidebar-link active flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-chart-bar w-5 h-5 mr-3"></i>
+                    Statistiques
+                </a>
+                <a href="../dashboard.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-arrow-left w-5 h-5 mr-3"></i>
+                    Retour
+                </a>
+                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 mt-8">
+                    <i class="fas fa-sign-out-alt w-5 h-5 mr-3"></i>
+                    Déconnexion
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="md:ml-64">
+        <header class="bg-white shadow-sm fixed top-0 right-0 left-0 md:left-64 z-30">
+            <div class="flex items-center justify-between px-4 py-3">
+                <button id="sidebarToggle" class="md:hidden text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600" id="adminName">Admin</span>
+                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold text-sm" id="adminInitial">
+                        A
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="pt-20 px-4 pb-8">
+            <div class="gradient-bg rounded-2xl p-6 text-white mb-8">
+                <h1 class="text-2xl font-bold">Statistiques</h1>
+                <p class="mt-2 opacity-90">Analyse de votre communauté</p>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Total</p>
+                            <p class="text-2xl font-bold text-gray-800" id="statTotal">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-users text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Actifs</p>
+                            <p class="text-2xl font-bold text-gray-800" id="statActifs">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-check text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Suspendus</p>
+                            <p class="text-2xl font-bold text-gray-800" id="statSuspendus">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-slash text-red-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Taux d'activité</p>
+                            <p class="text-2xl font-bold text-gray-800" id="statTaux">0%</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphiques -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Répartition des statuts</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm">
+                                <span>Actifs</span>
+                                <span id="progressActifs">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-green-500" id="progressActifsBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm">
+                                <span>Suspendus</span>
+                                <span id="progressSuspendus">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill bg-red-500" id="progressSuspendusBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Croissance</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Aujourd'hui</span>
+                            <span class="font-bold" id="growthToday">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Cette semaine</span>
+                            <span class="font-bold" id="growthWeek">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Ce mois</span>
+                            <span class="font-bold" id="growthMonth">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Total</span>
+                            <span class="font-bold" id="growthTotal">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Arbre des niveaux -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Niveaux de l'arbre</h3>
+                <div id="treeLevels" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Chargement...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Sidebar toggle
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+
+        // Déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            auth.signOut().then(() => {
+                window.location.href = '../connexion.html';
+            });
+        });
+
+        // Charger les statistiques
+        async function loadStats() {
+            try {
+                const snapshot = await db.collection('users').get();
+                const members = [];
+                snapshot.forEach(doc => {
+                    members.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                const total = members.length;
+                const actifs = members.filter(m => m.statut === 'actif').length;
+                const suspendus = members.filter(m => m.statut === 'suspendu').length;
+                const taux = total > 0 ? Math.round((actifs / total) * 100) : 0;
+
+                document.getElementById('statTotal').textContent = total;
+                document.getElementById('statActifs').textContent = actifs;
+                document.getElementById('statSuspendus').textContent = suspendus;
+                document.getElementById('statTaux').textContent = taux + '%';
+
+                // Progression
+                document.getElementById('progressActifs').textContent = taux + '%';
+                document.getElementById('progressActifsBar').style.width = taux + '%';
+                document.getElementById('progressSuspendus').textContent = (100 - taux) + '%';
+                document.getElementById('progressSuspendusBar').style.width = (100 - taux) + '%';
+
+                // Croissance
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const weekStart = new Date(today);
+                weekStart.setDate(weekStart.getDate() - 7);
+                const monthStart = new Date(today);
+                monthStart.setDate(monthStart.getDate() - 30);
+
+                let todayCount = 0, weekCount = 0, monthCount = 0;
+
+                members.forEach(m => {
+                    if (m.dateInscription) {
+                        const date = m.dateInscription.toDate ? m.dateInscription.toDate() : new Date(m.dateInscription);
+                        if (date >= today) todayCount++;
+                        if (date >= weekStart) weekCount++;
+                        if (date >= monthStart) monthCount++;
+                    }
+                });
+
+                document.getElementById('growthToday').textContent = todayCount;
+                document.getElementById('growthWeek').textContent = weekCount;
+                document.getElementById('growthMonth').textContent = monthCount;
+                document.getElementById('growthTotal').textContent = total;
+
+                // Niveaux de l'arbre
+                await loadTreeLevels(members);
+
+            } catch (error) {
+                console.error('Erreur chargement stats:', error);
+            }
+        }
+
+        // Charger les niveaux de l'arbre
+        async function loadTreeLevels(members) {
+            const container = document.getElementById('treeLevels');
+            
+            // Trouver la racine
+            const root = members.find(m => !m.position);
+            if (!root) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">Aucun arbre disponible</p>';
+                return;
+            }
+
+            // Compter les membres par niveau (BFS)
+            const levels = {};
+            const queue = [{ id: root.id, level: 0 }];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const { id, level } = queue.shift();
+                if (visited.has(id)) continue;
+                visited.add(id);
+                
+                if (!levels[level]) levels[level] = 0;
+                levels[level]++;
+
+                const member = members.find(m => m.id === id);
+                if (member) {
+                    if (member.leftChildId && members.find(m => m.id === member.leftChildId)) {
+                        queue.push({ id: member.leftChildId, level: level + 1 });
+                    }
+                    if (member.rightChildId && members.find(m => m.id === member.rightChildId)) {
+                        queue.push({ id: member.rightChildId, level: level + 1 });
+                    }
+                }
+            }
+
+            // Afficher les niveaux
+            const maxLevel = Math.max(...Object.keys(levels).map(Number));
+            const maxCount = Math.max(...Object.values(levels));
+
+            container.innerHTML = Object.keys(levels).sort((a, b) => a - b).map(level => {
+                const count = levels[level];
+                const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                const levelName = level === '0' ? 'Racine' : `Niveau ${level}`;
+                return `
+                    <div>
+                        <div class="flex justify-between text-sm">
+                            <span>${levelName}</span>
+                            <span>${count} membre${count > 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill bg-blue-500" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Vérifier l'authentification
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = '../connexion.html';
+                return;
+            }
+
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (!userDoc.exists || userDoc.data().role !== 'admin') {
+                    window.location.href = '../dashboard.html';
+                    return;
+                }
+
+                currentUser = user;
+                const data = userDoc.data();
+                document.getElementById('adminName').textContent = `${data.prenom} ${data.nom}`;
+                document.getElementById('adminInitial').textContent = data.prenom.charAt(0).toUpperCase();
+                
+                loadStats();
+            } catch (error) {
+                console.error('Erreur vérification admin:', error);
+                window.location.href = '../dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
