@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - CommunityTree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .input-focus:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase-app": "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js",
+                "firebase-auth": "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js",
+                "firebase-firestore": "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "firebase-app";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase-auth";
+        import { getFirestore, doc, getDoc } from "firebase-firestore";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.auth = auth;
+        window.db = db;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    </script>
+
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
+            <div class="text-center">
+                <a href="index.html" class="inline-flex items-center justify-center">
+                    <i class="fas fa-tree text-blue-600 text-3xl mr-2"></i>
+                    <span class="text-2xl font-bold text-gray-800">CommunityTree</span>
+                </a>
+                <h2 class="mt-6 text-3xl font-bold text-gray-900">Connexion</h2>
+                <p class="mt-2 text-sm text-gray-600">Connectez-vous à votre compte</p>
+            </div>
+
+            <form id="loginForm" class="mt-8 space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" name="email" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm input-focus focus:outline-none">
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Mot de passe</label>
+                    <input type="password" id="password" name="password" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm input-focus focus:outline-none">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input id="remember-me" name="remember-me" type="checkbox"
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+                            Se souvenir de moi
+                        </label>
+                    </div>
+                    <a href="mot-de-passe-oublie.html" class="text-sm text-blue-600 hover:text-blue-500">
+                        Mot de passe oublié ?
+                    </a>
+                </div>
+
+                <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+                <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm"></div>
+
+                <button type="submit" id="submitBtn"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-spinner fa-spin hidden mr-2" id="loadingSpinner"></i>
+                    <span id="btnText">Se connecter</span>
+                </button>
+            </form>
+
+            <p class="mt-4 text-center text-sm text-gray-600">
+                Pas encore de compte ? 
+                <a href="inscription.html" class="font-medium text-blue-600 hover:text-blue-500">S'inscrire</a>
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "firebase-auth";
+        import { getFirestore, doc, getDoc } from "firebase-firestore";
+
+        const auth = window.auth;
+        const db = window.db;
+
+        const form = document.getElementById('loginForm');
+        const errorDiv = document.getElementById('errorMessage');
+        const successDiv = document.getElementById('successMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const btnText = document.getElementById('btnText');
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            successDiv.classList.add('hidden');
+        }
+
+        function showSuccess(message) {
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+        }
+
+        function setLoading(loading) {
+            if (loading) {
+                loadingSpinner.classList.remove('hidden');
+                btnText.textContent = 'Connexion en cours...';
+                submitBtn.disabled = true;
+            } else {
+                loadingSpinner.classList.add('hidden');
+                btnText.textContent = 'Se connecter';
+                submitBtn.disabled = false;
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showError('Veuillez remplir tous les champs');
+                return;
+            }
+
+            setLoading(true);
+            errorDiv.classList.add('hidden');
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Vérifier si le compte est suspendu
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists && userDoc.data().statut === 'suspendu') {
+                    await auth.signOut();
+                    showError('Votre compte a été suspendu. Veuillez contacter l\'administrateur.');
+                    setLoading(false);
+                    return;
+                }
+
+                showSuccess('Connexion réussie ! Redirection...');
+                
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                
+                if (error.code === 'auth/user-not-found') {
+                    showError('Aucun compte trouvé avec cet email');
+                } else if (error.code === 'auth/wrong-password') {
+                    showError('Mot de passe incorrect');
+                } else if (error.code === 'auth/invalid-email') {
+                    showError('Email invalide');
+                } else if (error.code === 'auth/user-disabled') {
+                    showError('Ce compte a été désactivé');
+                } else if (error.code === 'auth/too-many-requests') {
+                    showError('Trop de tentatives. Veuillez réessayer plus tard.');
+                } else {
+                    showError('Erreur de connexion. Veuillez réessayer.');
+                }
+                setLoading(false);
+            }
+        });
+
+        // Vérifier si l'utilisateur est déjà connecté
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = 'dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
