@@ -7,9 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
 
     <style>
         .gradient-bg {
@@ -17,6 +18,7 @@
         }
         .sidebar-link {
             transition: all 0.2s;
+            cursor: pointer;
         }
         .sidebar-link:hover {
             background: rgba(102, 126, 234, 0.1);
@@ -48,17 +50,36 @@
         .info-item:last-child {
             border-bottom: none;
         }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-suspended {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .copy-btn:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
+    <!-- Configuration Firebase -->
     <script>
         const firebaseConfig = {
-            apiKey: "VOTRE_API_KEY",
-            authDomain: "VOTRE_AUTH_DOMAIN",
-            projectId: "VOTRE_PROJECT_ID",
-            storageBucket: "VOTRE_STORAGE_BUCKET",
-            messagingSenderId: "VOTRE_SENDER_ID",
-            appId: "VOTRE_APP_ID"
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -68,14 +89,14 @@
     </script>
 
     <!-- Sidebar -->
-    <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40" id="sidebar">
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
         <div class="flex flex-col h-full">
             <div class="flex items-center justify-center h-16 border-b">
                 <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
                 <span class="text-xl font-bold text-gray-800">CommunityTree</span>
             </div>
             
-            <nav class="flex-1 px-4 py-6 space-y-2">
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 <a href="dashboard.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
                     <i class="fas fa-home w-5 h-5 mr-3"></i>
                     Dashboard
@@ -88,7 +109,7 @@
                     <i class="fas fa-user w-5 h-5 mr-3"></i>
                     Mon Profil
                 </a>
-                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50">
+                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 mt-8">
                     <i class="fas fa-sign-out-alt w-5 h-5 mr-3"></i>
                     Déconnexion
                 </a>
@@ -106,7 +127,7 @@
                 </button>
                 <div class="flex items-center space-x-4">
                     <span class="text-sm text-gray-600" id="userName">Chargement...</span>
-                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold" id="userInitial">
+                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold text-sm" id="userInitial">
                         U
                     </div>
                 </div>
@@ -133,7 +154,7 @@
                         </div>
                         <div class="info-item">
                             <span class="text-gray-600">Statut</span>
-                            <span id="profileStatus" class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">Actif</span>
+                            <span id="profileStatus" class="status-badge status-active">Actif</span>
                         </div>
                         <div class="info-item">
                             <span class="text-gray-600">Rôle</span>
@@ -161,16 +182,16 @@
                         <button onclick="window.location.href='arbre.html'" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                             <i class="fas fa-sitemap mr-2"></i> Voir mon arbre
                         </button>
-                        <button onclick="copyCode()" class="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition">
+                        <button onclick="copyCode()" class="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition copy-btn">
                             <i class="fas fa-copy mr-2"></i> Copier mon code
                         </button>
                     </div>
                 </div>
 
-                <!-- Admin Actions (visible uniquement pour les admins) -->
+                <!-- Admin Actions -->
                 <div id="adminActions" class="hidden mt-6 bg-white rounded-xl shadow-sm p-8">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Actions Administrateur</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <button onclick="window.location.href='admin/dashboard.html'" class="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
                             <i class="fas fa-chart-pie mr-2"></i> Dashboard Admin
                         </button>
@@ -190,33 +211,40 @@
         let currentUserData = null;
 
         // Sidebar toggle
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
         });
 
         // Déconnexion
-        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
-            try {
-                await auth.signOut();
+            auth.signOut().then(() => {
                 window.location.href = 'connexion.html';
-            } catch (error) {
-                console.error('Erreur déconnexion:', error);
-            }
+            });
         });
 
         // Copier le code
         window.copyCode = function() {
             const code = document.getElementById('profileCode').textContent;
             if (code && code !== '---') {
-                navigator.clipboard.writeText(code).then(() => {
-                    const btn = document.querySelector('.border-blue-600');
-                    const originalText = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-check mr-2"></i> Copié !';
-                    setTimeout(() => {
-                        btn.innerHTML = originalText;
-                    }, 2000);
-                });
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(code).then(() => {
+                        const btn = document.querySelector('.border-blue-600');
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '<i class="fas fa-check mr-2"></i> Copié !';
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                        }, 2000);
+                    });
+                } else {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = code;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    textArea.remove();
+                    alert('Code copié !');
+                }
             }
         };
 
@@ -226,6 +254,7 @@
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (!userDoc.exists) {
                     console.error('Document utilisateur non trouvé');
+                    window.location.href = 'connexion.html';
                     return;
                 }
 
@@ -245,10 +274,10 @@
                 // Statut
                 const statusEl = document.getElementById('profileStatus');
                 if (data.statut === 'actif') {
-                    statusEl.className = 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-700';
+                    statusEl.className = 'status-badge status-active';
                     statusEl.textContent = 'Actif';
                 } else {
-                    statusEl.className = 'px-2 py-1 rounded-full text-xs bg-red-100 text-red-700';
+                    statusEl.className = 'status-badge status-suspended';
                     statusEl.textContent = 'Suspendu';
                 }
 
@@ -256,11 +285,13 @@
                 document.getElementById('profileRole').textContent = data.role === 'admin' ? 'Administrateur' : 'Membre';
 
                 // Date
-                document.getElementById('profileDate').textContent = data.dateInscription ? 
-                    new Date(data.dateInscription.seconds * 1000).toLocaleDateString('fr-FR', {
+                if (data.dateInscription) {
+                    const date = data.dateInscription.toDate ? data.dateInscription.toDate() : new Date(data.dateInscription);
+                    document.getElementById('profileDate').textContent = date.toLocaleDateString('fr-FR', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
-                    }) : '---';
+                    });
+                }
 
                 // Position
                 const positionMap = {
@@ -274,11 +305,15 @@
                 if (data.codeParrain) {
                     document.getElementById('profileParrain').textContent = data.codeParrain;
                     if (data.parrainId) {
-                        const parrainDoc = await db.collection('users').doc(data.parrainId).get();
-                        if (parrainDoc.exists) {
-                            const parrainData = parrainDoc.data();
-                            document.getElementById('profileParrain').textContent = 
-                                `${parrainData.prenom} ${parrainData.nom} (${data.codeParrain})`;
+                        try {
+                            const parrainDoc = await db.collection('users').doc(data.parrainId).get();
+                            if (parrainDoc.exists) {
+                                const parrainData = parrainDoc.data();
+                                document.getElementById('profileParrain').textContent = 
+                                    `${parrainData.prenom} ${parrainData.nom} (${data.codeParrain})`;
+                            }
+                        } catch (error) {
+                            console.error('Erreur chargement parrain:', error);
                         }
                     }
                 } else {
@@ -287,17 +322,21 @@
 
                 // Parent
                 if (data.parentId) {
-                    const parentDoc = await db.collection('users').doc(data.parentId).get();
-                    if (parentDoc.exists) {
-                        const parentData = parentDoc.data();
-                        document.getElementById('profileParent').textContent = 
-                            `${parentData.prenom} ${parentData.nom} (${parentData.codeMembre})`;
+                    try {
+                        const parentDoc = await db.collection('users').doc(data.parentId).get();
+                        if (parentDoc.exists) {
+                            const parentData = parentDoc.data();
+                            document.getElementById('profileParent').textContent = 
+                                `${parentData.prenom} ${parentData.nom} (${parentData.codeMembre})`;
+                        }
+                    } catch (error) {
+                        console.error('Erreur chargement parent:', error);
                     }
                 } else {
                     document.getElementById('profileParent').textContent = 'Aucun (Racine)';
                 }
 
-                // Afficher les actions admin si l'utilisateur est admin
+                // Afficher les actions admin
                 if (data.role === 'admin') {
                     document.getElementById('adminActions').classList.remove('hidden');
                 }
