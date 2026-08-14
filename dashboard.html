@@ -11,7 +11,6 @@
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-functions-compat.js"></script>
 
     <style>
         .gradient-bg {
@@ -56,13 +55,11 @@
             background: #fee2e2;
             color: #991b1b;
         }
-        @media (max-width: 768px) {
-            .sidebar-mobile {
-                transform: translateX(-100%);
-            }
-            .sidebar-mobile.open {
-                transform: translateX(0);
-            }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
     </style>
 </head>
@@ -82,12 +79,19 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const functions = firebase.functions();
         db.settings({ timestampsInSnapshots: true });
     </script>
 
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-spinner">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-gray-600">Chargement...</p>
+        </div>
+    </div>
+
     <!-- Sidebar -->
-    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 hidden">
         <div class="flex flex-col h-full">
             <div class="flex items-center justify-center h-16 border-b">
                 <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
@@ -116,7 +120,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="md:ml-64">
+    <div id="mainContent" class="md:ml-64 hidden">
         <!-- Top Bar -->
         <header class="bg-white shadow-sm fixed top-0 right-0 left-0 md:left-64 z-30">
             <div class="flex items-center justify-between px-4 py-3">
@@ -239,6 +243,23 @@
         let currentUserData = null;
         let currentUser = null;
 
+        // ============================================
+        // FONCTIONS D'AFFICHAGE
+        // ============================================
+
+        function showLoading(show) {
+            document.getElementById('loadingScreen').style.display = show ? 'flex' : 'none';
+        }
+
+        function showMainContent(show) {
+            document.getElementById('sidebar').classList.toggle('hidden', !show);
+            document.getElementById('mainContent').classList.toggle('hidden', !show);
+        }
+
+        // ============================================
+        // FONCTIONS DE GESTION
+        // ============================================
+
         // Sidebar toggle
         document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
@@ -290,6 +311,10 @@
             textArea.remove();
         }
 
+        // ============================================
+        // FONCTIONS DE DONNÉES
+        // ============================================
+
         // Compter les descendants
         async function countDescendants(userId) {
             let count = 0;
@@ -329,17 +354,21 @@
         // Charger les données du dashboard
         async function loadDashboard(user) {
             try {
-                currentUser = user;
+                console.log('Chargement des données pour l\'utilisateur:', user.uid);
+                
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 
                 if (!userDoc.exists) {
                     console.error('Document utilisateur non trouvé');
-                    window.location.href = 'connexion.html';
+                    // Créer le document s'il n'existe pas
+                    await createUserDocument(user);
                     return;
                 }
 
                 currentUserData = userDoc.data();
                 const data = currentUserData;
+
+                console.log('Données utilisateur chargées:', data);
 
                 // Mettre à jour l'interface
                 document.getElementById('userName').textContent = `${data.prenom} ${data.nom}`;
@@ -406,18 +435,109 @@
                 document.getElementById('leftCount').textContent = counts.left;
                 document.getElementById('rightCount').textContent = counts.right;
 
+                // Afficher le contenu
+                showLoading(false);
+                showMainContent(true);
+
             } catch (error) {
                 console.error('Erreur chargement dashboard:', error);
                 document.getElementById('welcomeText').textContent = 'Erreur de chargement';
+                showLoading(false);
+                showMainContent(true);
             }
         }
+
+        // Créer le document utilisateur s'il n'existe pas
+        async function createUserDocument(user) {
+            try {
+                console.log('Création du document pour l\'utilisateur:', user.uid);
+                
+                // Vérifier si c'est le premier utilisateur
+                const usersSnapshot = await db.collection('users').limit(1).get();
+                const isFirstUser = usersSnapshot.empty;
+                
+                // Générer un code membre
+                const codeMembre = await generateMemberCode();
+                
+                const userData = {
+                    uid: user.uid,
+                    codeMembre: codeMembre,
+                    nom: user.displayName?.split(' ')[1] || 'Admin',
+                    prenom: user.displayName?.split(' ')[0] || 'Admin',
+                    telephone: 'Non renseigné',
+                    email: user.email,
+                    codeParrain: null,
+                    parrainId: null,
+                    parentId: null,
+                    position: null,
+                    leftChildId: null,
+                    rightChildId: null,
+                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                    statut: 'actif',
+                    role: isFirstUser ? 'admin' : 'member',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('users').doc(user.uid).set(userData);
+                console.log('Document créé avec succès');
+                
+                // Recharger le dashboard
+                await loadDashboard(user);
+            } catch (error) {
+                console.error('Erreur création document:', error);
+                showLoading(false);
+                showMainContent(true);
+            }
+        }
+
+        // Générer un code membre
+        async function generateMemberCode() {
+            const counterRef = db.collection('counters').doc('memberCode');
+            
+            try {
+                const result = await db.runTransaction(async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    
+                    let currentNumber;
+                    if (!counterDoc.exists) {
+                        currentNumber = 1;
+                        transaction.set(counterRef, { currentNumber });
+                    } else {
+                        currentNumber = counterDoc.data().currentNumber + 1;
+                        transaction.update(counterRef, { currentNumber });
+                    }
+                    
+                    return currentNumber;
+                });
+                
+                return `MB${String(result).padStart(6, '0')}`;
+            } catch (error) {
+                console.error('Erreur génération code:', error);
+                return `MB${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`;
+            }
+        }
+
+        // ============================================
+        // AUTHENTIFICATION
+        // ============================================
 
         // Vérifier l'authentification
         auth.onAuthStateChanged((user) => {
             if (!user) {
+                console.log('Utilisateur non connecté, redirection vers connexion');
                 window.location.href = 'connexion.html';
                 return;
             }
+            
+            console.log('Utilisateur connecté:', user.uid);
+            currentUser = user;
+            
+            // Afficher le loading
+            showLoading(true);
+            showMainContent(false);
+            
+            // Charger le dashboard
             loadDashboard(user);
         });
     </script>
