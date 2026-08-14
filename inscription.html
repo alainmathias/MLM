@@ -48,6 +48,13 @@
         .loading-overlay.active {
             display: flex;
         }
+        .info-badge {
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #4b5563;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -140,16 +147,18 @@
                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm input-focus focus:outline-none">
                 </div>
 
-                <!-- Code parrain -->
+                <!-- Code parrain avec indicateur -->
                 <div>
                     <label for="codeParrain" class="block text-sm font-medium text-gray-700">Code du parrain</label>
                     <input type="text" id="codeParrain" name="codeParrain"
                            placeholder="Ex: MB000001"
                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm input-focus focus:outline-none">
-                    <p class="mt-1 text-xs text-gray-500">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Obligatoire sauf pour le premier administrateur
-                    </p>
+                    <div id="parrainInfo" class="mt-2">
+                        <div class="info-badge">
+                            <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                            <span id="parrainMessage">Laissez vide si vous êtes le premier administrateur</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Messages -->
@@ -194,7 +203,8 @@
                 return snapshot.empty;
             } catch (error) {
                 console.error('Erreur vérification premier utilisateur:', error);
-                return false;
+                // En cas d'erreur, supposer que c'est le premier utilisateur
+                return true;
             }
         }
 
@@ -315,7 +325,7 @@
             // Si ce n'est pas le premier utilisateur, vérifier le code parrain
             if (!firstUser) {
                 if (!codeParrain) {
-                    throw new Error('Code parrain obligatoire');
+                    throw new Error('Code parrain obligatoire pour les nouveaux membres');
                 }
                 
                 // Rechercher le parrain par code
@@ -330,6 +340,9 @@
                 
                 parrainDoc = parrainQuery.docs[0];
                 console.log('Parrain trouvé:', parrainDoc.id);
+            } else {
+                // Premier utilisateur : pas besoin de code parrain
+                console.log('Premier utilisateur - pas de code parrain requis');
             }
             
             // Créer l'utilisateur Firebase Auth
@@ -442,6 +455,49 @@
         const confirmPasswordInput = document.getElementById('confirmPassword');
         const passwordStrength = document.getElementById('passwordStrength');
         const passwordHelp = document.getElementById('passwordHelp');
+        const codeParrainInput = document.getElementById('codeParrain');
+        const parrainMessage = document.getElementById('parrainMessage');
+
+        // Mettre à jour le message du code parrain en temps réel
+        codeParrainInput.addEventListener('input', async function() {
+            const value = this.value.trim();
+            const messageEl = document.getElementById('parrainMessage');
+            
+            if (!value) {
+                // Vérifier si c'est le premier utilisateur
+                try {
+                    const firstUser = await isFirstUser();
+                    if (firstUser) {
+                        messageEl.innerHTML = '<i class="fas fa-star text-yellow-500 mr-2"></i> Vous êtes le premier administrateur ! Laissez vide.';
+                        messageEl.parentElement.style.borderColor = '#f59e0b';
+                    } else {
+                        messageEl.textContent = '⚠️ Code parrain obligatoire pour les nouveaux membres';
+                        messageEl.parentElement.style.borderColor = '#ef4444';
+                    }
+                } catch (error) {
+                    messageEl.textContent = 'Vérification en cours...';
+                }
+            } else {
+                // Vérifier si le code existe
+                try {
+                    const parrainQuery = await db.collection('users')
+                        .where('codeMembre', '==', value)
+                        .limit(1)
+                        .get();
+                    
+                    if (!parrainQuery.empty) {
+                        const parrainData = parrainQuery.docs[0].data();
+                        messageEl.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2"></i> ✅ Parrain: ${parrainData.prenom} ${parrainData.nom}`;
+                        messageEl.parentElement.style.borderColor = '#22c55e';
+                    } else {
+                        messageEl.innerHTML = '<i class="fas fa-times-circle text-red-500 mr-2"></i> ❌ Code parrain inexistant';
+                        messageEl.parentElement.style.borderColor = '#ef4444';
+                    }
+                } catch (error) {
+                    messageEl.textContent = 'Erreur de vérification';
+                }
+            }
+        });
 
         function showError(message) {
             errorDiv.textContent = message;
@@ -538,25 +594,20 @@
                 return;
             }
 
-            // Vérifier si c'est le premier utilisateur
-            if (!codeParrain) {
-                try {
-                    const firstUser = await isFirstUser();
-                    if (!firstUser) {
-                        showError('Le code du parrain est obligatoire');
-                        return;
-                    }
-                } catch (error) {
-                    console.error('Erreur vérification:', error);
-                    showError('Erreur lors de la vérification du premier utilisateur');
-                    return;
-                }
-            }
-
             setLoading(true);
             errorDiv.classList.add('hidden');
 
             try {
+                // Vérifier si c'est le premier utilisateur
+                const firstUser = await isFirstUser();
+                
+                // Si ce n'est pas le premier utilisateur, le code parrain est obligatoire
+                if (!firstUser && !codeParrain) {
+                    showError('Le code du parrain est obligatoire pour les nouveaux membres');
+                    setLoading(false);
+                    return;
+                }
+
                 const result = await inscrireMembre({
                     nom,
                     prenom,
@@ -588,9 +639,7 @@
                 } else if (error.message?.includes('Code parrain inexistant')) {
                     errorMessage = 'Code parrain inexistant';
                 } else if (error.message?.includes('Code parrain obligatoire')) {
-                    errorMessage = 'Le code du parrain est obligatoire';
-                } else if (error.message?.includes('Erreur de structure de l\'arbre')) {
-                    errorMessage = 'Erreur de structure. Contactez l\'administrateur.';
+                    errorMessage = 'Le code du parrain est obligatoire pour les nouveaux membres';
                 } else if (error.message) {
                     errorMessage = error.message;
                 }
