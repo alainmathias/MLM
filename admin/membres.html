@@ -11,7 +11,6 @@
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-functions-compat.js"></script>
 
     <style>
         .gradient-bg {
@@ -56,6 +55,27 @@
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
         }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+            max-width: 400px;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast-success { background: #16a34a; }
+        .toast-error { background: #dc2626; }
+        .toast-warning { background: #d97706; }
     </style>
 </head>
 <body>
@@ -73,9 +93,11 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const functions = firebase.functions();
         db.settings({ timestampsInSnapshots: true });
     </script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
 
     <!-- Sidebar -->
     <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
@@ -217,6 +239,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Mot de passe *</label>
                     <input type="password" id="addPassword" required minlength="8" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <p class="mt-1 text-xs text-gray-500">Minimum 8 caractères</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Code du parrain *</label>
@@ -225,7 +248,7 @@
                 </div>
                 <div id="addError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
                 <div id="addSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm"></div>
-                <button type="submit" id="addSubmitBtn" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition">
+                <button type="submit" id="addSubmitBtn" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-spinner fa-spin hidden mr-2" id="addLoading"></i>
                     <span id="addBtnText">Ajouter le membre</span>
                 </button>
@@ -301,12 +324,233 @@
         let currentFilter = 'all';
         let currentDetailId = null;
 
-        // Sidebar toggle
+        // ============================================
+        // TOAST NOTIFICATION
+        // ============================================
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // ============================================
+        // FONCTIONS DE DONNÉES (SANS CLOUD FUNCTIONS)
+        // ============================================
+
+        // Générer un code membre unique
+        async function generateMemberCode() {
+            const counterRef = db.collection('counters').doc('memberCode');
+            
+            try {
+                const result = await db.runTransaction(async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    
+                    let currentNumber;
+                    if (!counterDoc.exists) {
+                        currentNumber = 1;
+                        transaction.set(counterRef, { currentNumber });
+                    } else {
+                        currentNumber = counterDoc.data().currentNumber + 1;
+                        transaction.update(counterRef, { currentNumber });
+                    }
+                    
+                    return currentNumber;
+                });
+                
+                return `MB${String(result).padStart(6, '0')}`;
+            } catch (error) {
+                console.error('Erreur génération code:', error);
+                const random = Math.floor(Math.random() * 1000000);
+                return `MB${String(random).padStart(6, '0')}`;
+            }
+        }
+
+        // Rechercher la première position disponible (BFS)
+        async function findNextAvailablePosition(racineId) {
+            if (!racineId) {
+                return { parentId: null, position: null };
+            }
+            
+            const queue = [racineId];
+            const visited = new Set();
+            
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+                
+                try {
+                    const currentDoc = await db.collection('users').doc(currentId).get();
+                    if (!currentDoc.exists) continue;
+                    
+                    const currentData = currentDoc.data();
+                    
+                    if (!currentData.leftChildId) {
+                        return { parentId: currentId, position: 'left' };
+                    }
+                    queue.push(currentData.leftChildId);
+                    
+                    if (!currentData.rightChildId) {
+                        return { parentId: currentId, position: 'right' };
+                    }
+                    queue.push(currentData.rightChildId);
+                } catch (error) {
+                    console.error('Erreur BFS:', error);
+                }
+            }
+            
+            return { parentId: racineId, position: 'left' };
+        }
+
+        // Trouver la racine
+        async function findRoot() {
+            try {
+                const racineQuery = await db.collection('users')
+                    .where('position', '==', null)
+                    .limit(1)
+                    .get();
+                
+                if (!racineQuery.empty) {
+                    return racineQuery.docs[0].id;
+                }
+                
+                const firstUser = await db.collection('users')
+                    .orderBy('dateInscription')
+                    .limit(1)
+                    .get();
+                
+                if (!firstUser.empty) {
+                    return firstUser.docs[0].id;
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Erreur recherche racine:', error);
+                return null;
+            }
+        }
+
+        // ============================================
+        // INSCRIPTION ADMIN SANS CLOUD FUNCTIONS
+        // ============================================
+
+        async function inscrireMembreAdmin(data) {
+            const { email, password, nom, prenom, telephone, codeParrain } = data;
+            
+            // Validation
+            if (!email || !password || !nom || !prenom || !telephone || !codeParrain) {
+                throw new Error('Tous les champs sont obligatoires');
+            }
+            
+            // 1. Vérifier que le code parrain existe
+            const parrainQuery = await db.collection('users')
+                .where('codeMembre', '==', codeParrain)
+                .limit(1)
+                .get();
+            
+            if (parrainQuery.empty) {
+                throw new Error('Code parrain inexistant');
+            }
+            
+            const parrainDoc = parrainQuery.docs[0];
+            
+            // 2. Créer l'utilisateur Firebase Auth
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                // Mettre à jour le profil
+                await user.updateProfile({
+                    displayName: `${prenom} ${nom}`
+                });
+                
+                // 3. Générer le code membre
+                const codeMembre = await generateMemberCode();
+                
+                // 4. Trouver la racine
+                const rootId = await findRoot();
+                if (!rootId) {
+                    throw new Error('Aucune racine trouvée');
+                }
+                
+                // 5. Trouver la position
+                const positionInfo = await findNextAvailablePosition(rootId);
+                const parentId = positionInfo.parentId;
+                const position = positionInfo.position;
+                
+                // 6. Créer le document utilisateur
+                const userData = {
+                    uid: user.uid,
+                    codeMembre: codeMembre,
+                    nom: nom,
+                    prenom: prenom,
+                    telephone: telephone,
+                    email: email,
+                    codeParrain: codeParrain,
+                    parrainId: parrainDoc.id,
+                    parentId: parentId,
+                    position: position,
+                    leftChildId: null,
+                    rightChildId: null,
+                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                    statut: 'actif',
+                    role: 'member',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // 7. Sauvegarder avec transaction
+                await db.runTransaction(async (transaction) => {
+                    transaction.set(db.collection('users').doc(user.uid), userData);
+                    
+                    if (parentId) {
+                        const parentRef = db.collection('users').doc(parentId);
+                        const updateData = {};
+                        if (position === 'left') {
+                            updateData.leftChildId = user.uid;
+                        } else if (position === 'right') {
+                            updateData.rightChildId = user.uid;
+                        }
+                        transaction.update(parentRef, updateData);
+                    }
+                });
+                
+                return {
+                    success: true,
+                    uid: user.uid,
+                    codeMembre: codeMembre
+                };
+                
+            } catch (authError) {
+                console.error('Erreur Auth:', authError);
+                if (authError.code === 'auth/email-already-in-use') {
+                    throw new Error('Cet email est déjà utilisé par un autre compte');
+                } else if (authError.code === 'auth/weak-password') {
+                    throw new Error('Mot de passe trop faible (minimum 8 caractères)');
+                } else if (authError.code === 'auth/invalid-email') {
+                    throw new Error('Email invalide');
+                } else {
+                    throw new Error('Erreur lors de la création du compte: ' + authError.message);
+                }
+            }
+        }
+
+        // ============================================
+        // GESTION DE LA SIDEBAR
+        // ============================================
+
         document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
         });
 
-        // Déconnexion
+        // ============================================
+        // DÉCONNEXION
+        // ============================================
+
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             auth.signOut().then(() => {
@@ -314,7 +558,10 @@
             });
         });
 
-        // Modal functions
+        // ============================================
+        // MODAL FUNCTIONS
+        // ============================================
+
         function openAddModal() {
             document.getElementById('addModal').classList.remove('hidden');
             document.getElementById('addMemberForm').reset();
@@ -330,7 +577,10 @@
             document.getElementById('detailModal').classList.add('hidden');
         }
 
-        // Filtres
+        // ============================================
+        // FILTRES ET RECHERCHE
+        // ============================================
+
         function filterMembers(filter) {
             currentFilter = filter;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -343,10 +593,12 @@
             renderMembers();
         }
 
-        // Recherche
         document.getElementById('searchInput').addEventListener('input', renderMembers);
 
-        // Ajouter un membre (formulaire)
+        // ============================================
+        // AJOUT MEMBRE (CORRIGÉ - SANS CLOUD FUNCTIONS)
+        // ============================================
+
         document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -382,10 +634,10 @@
             btnText.textContent = 'Ajout en cours...';
             submitBtn.disabled = true;
             errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
 
             try {
-                const inscrireMembre = functions.httpsCallable('inscrireMembre');
-                const result = await inscrireMembre({
+                const result = await inscrireMembreAdmin({
                     nom,
                     prenom,
                     telephone,
@@ -394,26 +646,34 @@
                     codeParrain: codeParrain
                 });
 
-                if (result.data.success) {
-                    successDiv.textContent = '✅ Membre ajouté avec succès ! Code: ' + result.data.codeMembre;
+                if (result.success) {
+                    successDiv.textContent = '✅ Membre ajouté avec succès ! Code: ' + result.codeMembre;
                     successDiv.classList.remove('hidden');
                     document.getElementById('addMemberForm').reset();
                     loadMembers();
+                    showToast(`✅ Membre ${prenom} ${nom} ajouté avec succès ! Code: ${result.codeMembre}`, 'success');
                     setTimeout(() => {
                         closeAddModal();
                     }, 2000);
                 }
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('Erreur détaillée:', error);
                 let message = 'Erreur lors de l\'ajout';
-                if (error.message.includes('already-exists')) {
-                    message = 'Cet email est déjà utilisé';
-                } else if (error.message.includes('not-found')) {
-                    message = 'Code parrain inexistant';
+                if (error.message.includes('email déjà utilisé')) {
+                    message = '❌ Cet email est déjà utilisé par un autre compte';
+                } else if (error.message.includes('Code parrain inexistant')) {
+                    message = '❌ Code parrain inexistant';
+                } else if (error.message.includes('Mot de passe trop faible')) {
+                    message = '❌ Mot de passe trop faible (minimum 8 caractères)';
+                } else if (error.message.includes('Email invalide')) {
+                    message = '❌ Email invalide';
+                } else {
+                    message = '❌ ' + error.message;
                 }
-                errorDiv.textContent = '❌ ' + message;
+                errorDiv.textContent = message;
                 errorDiv.classList.remove('hidden');
                 successDiv.classList.add('hidden');
+                showToast(message, 'error');
             } finally {
                 loading.classList.add('hidden');
                 btnText.textContent = 'Ajouter le membre';
@@ -421,7 +681,10 @@
             }
         });
 
-        // Charger les membres
+        // ============================================
+        // CHARGEMENT DES MEMBRES
+        // ============================================
+
         async function loadMembers() {
             try {
                 const snapshot = await db.collection('users').get();
@@ -438,19 +701,20 @@
             }
         }
 
-        // Afficher les membres
+        // ============================================
+        // AFFICHAGE DES MEMBRES
+        // ============================================
+
         function renderMembers() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const tbody = document.getElementById('membersList');
             
             let filtered = allMembers;
             
-            // Filtrer par statut
             if (currentFilter !== 'all') {
                 filtered = filtered.filter(m => m.statut === currentFilter);
             }
             
-            // Filtrer par recherche
             if (searchTerm) {
                 filtered = filtered.filter(m => 
                     m.codeMembre?.toLowerCase().includes(searchTerm) ||
@@ -496,7 +760,10 @@
             `).join('');
         }
 
-        // Voir les détails d'un membre
+        // ============================================
+        // DÉTAILS D'UN MEMBRE
+        // ============================================
+
         async function viewMember(memberId) {
             try {
                 const doc = await db.collection('users').doc(memberId).get();
@@ -559,7 +826,6 @@
                     });
                 }
                 
-                // Bouton suspendre
                 const suspendBtn = document.getElementById('suspendBtn');
                 if (data.statut === 'actif') {
                     suspendBtn.innerHTML = '<i class="fas fa-pause mr-2"></i> Suspendre';
@@ -575,7 +841,10 @@
             }
         }
 
-        // Suspendre/Réactiver un membre
+        // ============================================
+        // SUSPENDRE/RÉACTIVER UN MEMBRE
+        // ============================================
+
         async function toggleSuspend() {
             if (!currentDetailId) return;
             await toggleSuspendMember(currentDetailId);
@@ -595,21 +864,22 @@
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                // Mettre à jour dans Firebase Auth
-                if (newStatus === 'suspendu') {
-                    await auth.updateUser(memberId, { disabled: true });
-                } else {
-                    await auth.updateUser(memberId, { disabled: false });
-                }
+                // Mettre à jour dans Firebase Auth (via l'API admin)
+                // Note: Cette partie nécessite des Cloud Functions ou une API Admin
+                // Pour l'instant, on met juste à jour Firestore
                 
                 loadMembers();
+                showToast(`Membre ${newStatus === 'actif' ? 'réactivé' : 'suspendu'} avec succès`, 'success');
             } catch (error) {
                 console.error('Erreur mise à jour statut:', error);
-                alert('Erreur lors de la mise à jour du statut');
+                showToast('Erreur lors de la mise à jour du statut', 'error');
             }
         }
 
-        // Vérifier l'authentification
+        // ============================================
+        // AUTHENTIFICATION
+        // ============================================
+
         auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = '../connexion.html';
