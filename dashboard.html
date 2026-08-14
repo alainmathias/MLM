@@ -7,9 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-functions-compat.js"></script>
 
     <style>
         .gradient-bg {
@@ -17,16 +19,15 @@
         }
         .stat-card {
             transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
         }
         .stat-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
-        .copy-btn:hover {
-            transform: scale(1.05);
-        }
         .sidebar-link {
             transition: all 0.2s;
+            cursor: pointer;
         }
         .sidebar-link:hover {
             background: rgba(102, 126, 234, 0.1);
@@ -37,34 +38,63 @@
             color: #667eea;
             border-right: 3px solid #667eea;
         }
+        .copy-btn:hover {
+            transform: scale(1.05);
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-suspended {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        @media (max-width: 768px) {
+            .sidebar-mobile {
+                transform: translateX(-100%);
+            }
+            .sidebar-mobile.open {
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Configuration Firebase -->
     <script>
         const firebaseConfig = {
-            apiKey: "VOTRE_API_KEY",
-            authDomain: "VOTRE_AUTH_DOMAIN",
-            projectId: "VOTRE_PROJECT_ID",
-            storageBucket: "VOTRE_STORAGE_BUCKET",
-            messagingSenderId: "VOTRE_SENDER_ID",
-            appId: "VOTRE_APP_ID"
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
         };
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const functions = firebase.functions();
         db.settings({ timestampsInSnapshots: true });
     </script>
 
     <!-- Sidebar -->
-    <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40" id="sidebar">
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
         <div class="flex flex-col h-full">
             <div class="flex items-center justify-center h-16 border-b">
                 <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
                 <span class="text-xl font-bold text-gray-800">CommunityTree</span>
             </div>
             
-            <nav class="flex-1 px-4 py-6 space-y-2">
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 <a href="dashboard.html" class="sidebar-link active flex items-center px-4 py-3 rounded-lg text-gray-700">
                     <i class="fas fa-home w-5 h-5 mr-3"></i>
                     Dashboard
@@ -77,7 +107,7 @@
                     <i class="fas fa-user w-5 h-5 mr-3"></i>
                     Mon Profil
                 </a>
-                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50">
+                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 mt-8">
                     <i class="fas fa-sign-out-alt w-5 h-5 mr-3"></i>
                     Déconnexion
                 </a>
@@ -95,7 +125,7 @@
                 </button>
                 <div class="flex items-center space-x-4">
                     <span class="text-sm text-gray-600" id="userName">Chargement...</span>
-                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold" id="userInitial">
+                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold text-sm" id="userInitial">
                         U
                     </div>
                 </div>
@@ -182,9 +212,7 @@
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Statut</p>
-                        <p class="font-medium">
-                            <span id="userStatus" class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">Actif</span>
-                        </p>
+                        <p id="userStatus" class="status-badge status-active">Actif</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Code Parrain</p>
@@ -209,60 +237,89 @@
 
     <script>
         let currentUserData = null;
+        let currentUser = null;
 
         // Sidebar toggle
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
         });
 
         // Déconnexion
-        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
-            try {
-                await auth.signOut();
+            auth.signOut().then(() => {
                 window.location.href = 'connexion.html';
-            } catch (error) {
+            }).catch((error) => {
                 console.error('Erreur déconnexion:', error);
-            }
+                alert('Erreur lors de la déconnexion');
+            });
         });
 
         // Copier le code
         window.copyCode = function() {
             const code = document.getElementById('myCode').textContent;
             if (code && code !== '---') {
-                navigator.clipboard.writeText(code).then(() => {
-                    const btn = document.querySelector('.copy-btn');
-                    const originalText = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-check mr-1"></i> Copié !';
-                    setTimeout(() => {
-                        btn.innerHTML = originalText;
-                    }, 2000);
-                });
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(code).then(() => {
+                        const btn = document.querySelector('.copy-btn');
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '<i class="fas fa-check mr-1"></i> Copié !';
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                        }, 2000);
+                    }).catch(() => {
+                        fallbackCopy(code);
+                    });
+                } else {
+                    fallbackCopy(code);
+                }
             }
         };
 
-        // Compter les descendants d'un nœud (BFS)
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                alert('Code copié !');
+            } catch (err) {
+                alert('Erreur lors de la copie');
+            }
+            textArea.remove();
+        }
+
+        // Compter les descendants
         async function countDescendants(userId) {
             let count = 0;
             let leftCount = 0;
             let rightCount = 0;
             const queue = [userId];
+            const visited = new Set();
             
             while (queue.length > 0) {
                 const currentId = queue.shift();
-                const doc = await db.collection('users').doc(currentId).get();
-                if (!doc.exists) continue;
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
                 
-                const data = doc.data();
-                if (data.leftChildId) {
-                    count++;
-                    leftCount++;
-                    queue.push(data.leftChildId);
-                }
-                if (data.rightChildId) {
-                    count++;
-                    rightCount++;
-                    queue.push(data.rightChildId);
+                try {
+                    const doc = await db.collection('users').doc(currentId).get();
+                    if (!doc.exists) continue;
+                    
+                    const data = doc.data();
+                    if (data.leftChildId) {
+                        count++;
+                        leftCount++;
+                        queue.push(data.leftChildId);
+                    }
+                    if (data.rightChildId) {
+                        count++;
+                        rightCount++;
+                        queue.push(data.rightChildId);
+                    }
+                } catch (error) {
+                    console.error('Erreur lors du comptage:', error);
                 }
             }
             
@@ -272,9 +329,12 @@
         // Charger les données du dashboard
         async function loadDashboard(user) {
             try {
+                currentUser = user;
                 const userDoc = await db.collection('users').doc(user.uid).get();
+                
                 if (!userDoc.exists) {
                     console.error('Document utilisateur non trouvé');
+                    window.location.href = 'connexion.html';
                     return;
                 }
 
@@ -289,9 +349,19 @@
                 document.getElementById('fullName').textContent = `${data.prenom} ${data.nom}`;
                 document.getElementById('userEmail').textContent = data.email;
                 document.getElementById('userPhone').textContent = data.telephone || 'Non renseigné';
-                document.getElementById('inscriptionDate').textContent = data.dateInscription ? 
-                    new Date(data.dateInscription.seconds * 1000).toLocaleDateString('fr-FR') : '---';
                 
+                // Date d'inscription
+                if (data.dateInscription) {
+                    const date = data.dateInscription.toDate ? data.dateInscription.toDate() : new Date(data.dateInscription);
+                    document.getElementById('inscriptionDate').textContent = date.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
                 // Position
                 const positionMap = {
                     'left': 'Gauche',
@@ -303,10 +373,10 @@
                 // Statut
                 const statusEl = document.getElementById('userStatus');
                 if (data.statut === 'actif') {
-                    statusEl.className = 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-700';
+                    statusEl.className = 'status-badge status-active';
                     statusEl.textContent = 'Actif';
                 } else {
-                    statusEl.className = 'px-2 py-1 rounded-full text-xs bg-red-100 text-red-700';
+                    statusEl.className = 'status-badge status-suspended';
                     statusEl.textContent = 'Suspendu';
                 }
 
@@ -314,12 +384,15 @@
                 if (data.codeParrain) {
                     document.getElementById('parrainCode').textContent = data.codeParrain;
                     
-                    // Récupérer le nom du parrain
                     if (data.parrainId) {
-                        const parrainDoc = await db.collection('users').doc(data.parrainId).get();
-                        if (parrainDoc.exists) {
-                            const parrainData = parrainDoc.data();
-                            document.getElementById('parrainName').textContent = `${parrainData.prenom} ${parrainData.nom}`;
+                        try {
+                            const parrainDoc = await db.collection('users').doc(data.parrainId).get();
+                            if (parrainDoc.exists) {
+                                const parrainData = parrainDoc.data();
+                                document.getElementById('parrainName').textContent = `${parrainData.prenom} ${parrainData.nom}`;
+                            }
+                        } catch (error) {
+                            console.error('Erreur chargement parrain:', error);
                         }
                     }
                 } else {
@@ -335,6 +408,7 @@
 
             } catch (error) {
                 console.error('Erreur chargement dashboard:', error);
+                document.getElementById('welcomeText').textContent = 'Erreur de chargement';
             }
         }
 
