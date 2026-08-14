@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CommunityTree - Plateforme d'enregistrement</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .tree-icon {
+            font-size: 80px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#accueil" class="text-gray-700 hover:text-blue-600 transition">Accueil</a>
+                    <a href="#apropos" class="text-gray-700 hover:text-blue-600 transition">À propos</a>
+                    <a href="#fonctionnement" class="text-gray-700 hover:text-blue-600 transition">Comment ça marche</a>
+                    <a href="connexion.html" class="text-gray-700 hover:text-blue-600 transition">Connexion</a>
+                    <a href="inscription.html" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">S'inscrire</a>
+                </div>
+                
+                <div class="md:hidden flex items-center">
+                    <button id="menu-toggle" class="text-gray-700 hover:text-blue-600 focus:outline-none">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="mobile-menu" class="md:hidden hidden bg-white border-t">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="#accueil" class="block px-3 py-2 text-gray-700 hover:text-blue-600">Accueil</a>
+                <a href="#apropos" class="block px-3 py-2 text-gray-700 hover:text-blue-600">À propos</a>
+                <a href="#fonctionnement" class="block px-3 py-2 text-gray-700 hover:text-blue-600">Comment ça marche</a>
+                <a href="connexion.html" class="block px-3 py-2 text-gray-700 hover:text-blue-600">Connexion</a>
+                <a href="inscription.html" class="block px-3 py-2 bg-blue-600 text-white rounded-lg text-center">S'inscrire</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="accueil" class="pt-24 pb-16 min-h-screen flex items-center gradient-bg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="text-white">
+                    <h1 class="text-4xl md:text-6xl font-bold leading-tight">
+                        Rejoignez notre <span class="text-yellow-300">communauté</span>
+                    </h1>
+                    <p class="mt-6 text-xl text-white/90">
+                        Une plateforme innovante basée sur un système d'arbre binaire pour 
+                        organiser et développer votre réseau de membres.
+                    </p>
+                    <div class="mt-10 flex flex-col sm:flex-row gap-4">
+                        <a href="inscription.html" class="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition transform hover:scale-105 inline-flex items-center justify-center">
+                            <i class="fas fa-user-plus mr-2"></i>
+                            Créer mon compte
+                        </a>
+                        <a href="connexion.html" class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white/10 transition inline-flex items-center justify-center">
+                            <i class="fas fa-sign-in-alt mr-2"></i>
+                            Se connecter
+                        </a>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8">
+                        <div class="text-center text-white">
+                            <i class="fas fa-sitemap tree-icon"></i>
+                            <div class="mt-6 grid grid-cols-3 gap-4">
+                                <div class="bg-white/20 rounded-lg p-4">
+                                    <i class="fas fa-user text-3xl"></i>
+                                    <p class="mt-2 text-sm">Membres</p>
+                                </div>
+                                <div class="bg-white/20 rounded-lg p-4">
+                                    <i class="fas fa-users text-3xl"></i>
+                                    <p class="mt-2 text-sm">Communauté</p>
+                                </div>
+                                <div class="bg-white/20 rounded-lg p-4">
+                                    <i class="fas fa-chart-line text-3xl"></i>
+                                    <p class="mt-2 text-sm">Croissance</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section À propos -->
+    <section id="apropos" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">
+                À propos de notre plateforme
+            </h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center p-6 rounded-xl card-hover transition">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-shield-alt text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Sécurisé</h3>
+                    <p class="text-gray-600">Authentification Firebase et règles de sécurité strictes</p>
+                </div>
+                <div class="text-center p-6 rounded-xl card-hover transition">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-code-branch text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Arbre Binaire</h3>
+                    <p class="text-gray-600">Placement automatique intelligent dans l'arbre</p>
+                </div>
+                <div class="text-center p-6 rounded-xl card-hover transition">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-mobile-alt text-purple-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Responsive</h3>
+                    <p class="text-gray-600">Optimisé pour mobile et desktop</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section Comment ça marche -->
+    <section id="fonctionnement" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">
+                Comment ça marche ?
+            </h2>
+            <div class="grid md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
+                        1
+                    </div>
+                    <h3 class="font-semibold mb-2">Inscription</h3>
+                    <p class="text-gray-600 text-sm">Créez votre compte avec votre code parrain</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
+                        2
+                    </div>
+                    <h3 class="font-semibold mb-2">Placement</h3>
+                    <p class="text-gray-600 text-sm">Système automatique dans l'arbre binaire</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
+                        3
+                    </div>
+                    <h3 class="font-semibold mb-2">Croissance</h3>
+                    <p class="text-gray-600 text-sm">Développez votre réseau et suivez vos descendants</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
+                        4
+                    </div>
+                    <h3 class="font-semibold mb-2">Visualisation</h3>
+                    <p class="text-gray-600 text-sm">Consultez votre arbre en temps réel</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <i class="fas fa-tree text-2xl text-blue-400 mb-2"></i>
+                <p class="text-gray-400">© 2024 CommunityTree. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Menu mobile toggle
+        document.getElementById('menu-toggle').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // Vérifier si l'utilisateur est déjà connecté
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                // Rediriger vers le dashboard si connecté
+                window.location.href = 'dashboard.html';
+            }
+        });
+    </script>
+</body>
+          </html>
