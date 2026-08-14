@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -15,24 +20,34 @@
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase-app": "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js",
-                "firebase-auth": "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js",
-                "firebase-firestore": "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js"
-            }
-        }
-    </script>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-gray-700">Connexion en cours...</p>
+        </div>
+    </div>
 
-    <script type="module">
-        import { initializeApp } from "firebase-app";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase-auth";
-        import { getFirestore, doc, getDoc } from "firebase-firestore";
-
+    <!-- Configuration Firebase -->
+    <script>
         const firebaseConfig = {
             apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
             authDomain: "mlm1-598b5.firebaseapp.com",
@@ -43,13 +58,10 @@
             measurementId: "G-DLCVD2MRSC"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        window.auth = auth;
-        window.db = db;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
     </script>
 
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -106,18 +118,13 @@
         </div>
     </div>
 
-    <script type="module">
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "firebase-auth";
-        import { getFirestore, doc, getDoc } from "firebase-firestore";
-
-        const auth = window.auth;
-        const db = window.db;
-
+    <script>
         const form = document.getElementById('loginForm');
         const errorDiv = document.getElementById('errorMessage');
         const successDiv = document.getElementById('successMessage');
         const submitBtn = document.getElementById('submitBtn');
         const loadingSpinner = document.getElementById('loadingSpinner');
+        const loadingOverlay = document.getElementById('loadingOverlay');
         const btnText = document.getElementById('btnText');
 
         function showError(message) {
@@ -134,10 +141,12 @@
 
         function setLoading(loading) {
             if (loading) {
+                loadingOverlay.classList.add('active');
                 loadingSpinner.classList.remove('hidden');
                 btnText.textContent = 'Connexion en cours...';
                 submitBtn.disabled = true;
             } else {
+                loadingOverlay.classList.remove('active');
                 loadingSpinner.classList.add('hidden');
                 btnText.textContent = 'Se connecter';
                 submitBtn.disabled = false;
@@ -159,47 +168,124 @@
             errorDiv.classList.add('hidden');
 
             try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
                 const user = userCredential.user;
+                console.log('Utilisateur connecté:', user.uid);
 
-                // Vérifier si le compte est suspendu
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists && userDoc.data().statut === 'suspendu') {
-                    await auth.signOut();
-                    showError('Votre compte a été suspendu. Veuillez contacter l\'administrateur.');
-                    setLoading(false);
-                    return;
+                // Vérifier si le compte existe dans Firestore
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                
+                if (!userDoc.exists) {
+                    // Créer le document s'il n'existe pas
+                    console.log('Création du document utilisateur...');
+                    await createUserDocument(user);
+                } else {
+                    // Vérifier si le compte est suspendu
+                    const userData = userDoc.data();
+                    if (userData.statut === 'suspendu') {
+                        await auth.signOut();
+                        showError('❌ Votre compte a été suspendu. Veuillez contacter l\'administrateur.');
+                        setLoading(false);
+                        return;
+                    }
                 }
 
-                showSuccess('Connexion réussie ! Redirection...');
+                showSuccess('✅ Connexion réussie ! Redirection...');
                 
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1500);
 
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('Erreur détaillée:', error);
+                
+                let errorMessage = 'Erreur de connexion. Veuillez réessayer.';
                 
                 if (error.code === 'auth/user-not-found') {
-                    showError('Aucun compte trouvé avec cet email');
+                    errorMessage = '❌ Aucun compte trouvé avec cet email';
                 } else if (error.code === 'auth/wrong-password') {
-                    showError('Mot de passe incorrect');
+                    errorMessage = '❌ Mot de passe incorrect';
                 } else if (error.code === 'auth/invalid-email') {
-                    showError('Email invalide');
+                    errorMessage = '❌ Email invalide';
                 } else if (error.code === 'auth/user-disabled') {
-                    showError('Ce compte a été désactivé');
+                    errorMessage = '❌ Ce compte a été désactivé';
                 } else if (error.code === 'auth/too-many-requests') {
-                    showError('Trop de tentatives. Veuillez réessayer plus tard.');
-                } else {
-                    showError('Erreur de connexion. Veuillez réessayer.');
+                    errorMessage = '❌ Trop de tentatives. Veuillez réessayer plus tard.';
                 }
+                
+                showError(errorMessage);
                 setLoading(false);
             }
         });
 
+        // Créer le document utilisateur s'il n'existe pas
+        async function createUserDocument(user) {
+            try {
+                // Vérifier si c'est le premier utilisateur
+                const usersSnapshot = await db.collection('users').limit(1).get();
+                const isFirstUser = usersSnapshot.empty;
+                
+                // Générer un code membre
+                const codeMembre = await generateMemberCode();
+                
+                const userData = {
+                    uid: user.uid,
+                    codeMembre: codeMembre,
+                    nom: user.displayName?.split(' ')[1] || 'Utilisateur',
+                    prenom: user.displayName?.split(' ')[0] || 'Utilisateur',
+                    telephone: 'Non renseigné',
+                    email: user.email,
+                    codeParrain: null,
+                    parrainId: null,
+                    parentId: null,
+                    position: null,
+                    leftChildId: null,
+                    rightChildId: null,
+                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                    statut: 'actif',
+                    role: isFirstUser ? 'admin' : 'member',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('users').doc(user.uid).set(userData);
+                console.log('Document utilisateur créé avec succès');
+            } catch (error) {
+                console.error('Erreur création document:', error);
+            }
+        }
+
+        // Générer un code membre
+        async function generateMemberCode() {
+            const counterRef = db.collection('counters').doc('memberCode');
+            
+            try {
+                const result = await db.runTransaction(async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    
+                    let currentNumber;
+                    if (!counterDoc.exists) {
+                        currentNumber = 1;
+                        transaction.set(counterRef, { currentNumber });
+                    } else {
+                        currentNumber = counterDoc.data().currentNumber + 1;
+                        transaction.update(counterRef, { currentNumber });
+                    }
+                    
+                    return currentNumber;
+                });
+                
+                return `MB${String(result).padStart(6, '0')}`;
+            } catch (error) {
+                console.error('Erreur génération code:', error);
+                return `MB${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`;
+            }
+        }
+
         // Vérifier si l'utilisateur est déjà connecté
-        onAuthStateChanged(auth, (user) => {
+        auth.onAuthStateChanged((user) => {
             if (user) {
+                console.log('Déjà connecté, redirection vers dashboard');
                 window.location.href = 'dashboard.html';
             }
         });
