@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -32,23 +37,7 @@
 </head>
 <body class="bg-gray-50">
     <!-- Configuration Firebase -->
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase-app": "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js",
-                "firebase-auth": "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js",
-                "firebase-firestore": "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js",
-                "firebase-functions": "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js"
-            }
-        }
-    </script>
-
-    <script type="module">
-        import { initializeApp } from "firebase-app";
-        import { getAuth, onAuthStateChanged } from "firebase-auth";
-        import { getFirestore } from "firebase-firestore";
-        import { getFunctions, httpsCallable } from "firebase-functions";
-
+    <script>
         const firebaseConfig = {
             apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
             authDomain: "mlm1-598b5.firebaseapp.com",
@@ -59,16 +48,10 @@
             measurementId: "G-DLCVD2MRSC"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const functions = getFunctions(app);
-
-        // Exporter pour utilisation dans le script
-        window.auth = auth;
-        window.db = db;
-        window.functions = functions;
-        window.httpsCallable = httpsCallable;
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
     </script>
 
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -176,13 +159,205 @@
         </div>
     </div>
 
-    <script type="module">
-        import { getAuth, onAuthStateChanged } from "firebase-auth";
-        import { getFunctions, httpsCallable } from "firebase-functions";
+    <script>
+        // ============================================
+        // FONCTIONS UTILITAIRES
+        // ============================================
 
-        const auth = window.auth;
-        const functions = window.functions;
-        const httpsCallable = window.httpsCallable;
+        // Générer un code membre unique
+        async function generateMemberCode() {
+            const counterRef = db.collection('counters').doc('memberCode');
+            
+            try {
+                const result = await db.runTransaction(async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    
+                    let currentNumber;
+                    if (!counterDoc.exists) {
+                        currentNumber = 1;
+                        transaction.set(counterRef, { currentNumber });
+                    } else {
+                        currentNumber = counterDoc.data().currentNumber + 1;
+                        transaction.update(counterRef, { currentNumber });
+                    }
+                    
+                    return currentNumber;
+                });
+                
+                return `MB${String(result).padStart(6, '0')}`;
+            } catch (error) {
+                console.error('Erreur génération code:', error);
+                throw new Error('Erreur génération code membre');
+            }
+        }
+
+        // Rechercher la première position disponible (BFS)
+        async function findNextAvailablePosition(racineId) {
+            if (!racineId) {
+                return { parentId: null, position: null };
+            }
+            
+            const queue = [racineId];
+            const visited = new Set();
+            
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+                
+                const currentDoc = await db.collection('users').doc(currentId).get();
+                
+                if (!currentDoc.exists) continue;
+                
+                const currentData = currentDoc.data();
+                
+                // Vérifier gauche
+                if (!currentData.leftChildId) {
+                    return { parentId: currentId, position: 'left' };
+                }
+                queue.push(currentData.leftChildId);
+                
+                // Vérifier droite
+                if (!currentData.rightChildId) {
+                    return { parentId: currentId, position: 'right' };
+                }
+                queue.push(currentData.rightChildId);
+            }
+            
+            return { parentId: racineId, position: 'left' };
+        }
+
+        // ============================================
+        // FONCTION D'INSCRIPTION PRINCIPALE
+        // ============================================
+
+        async function inscrireMembre(data) {
+            const { email, password, nom, prenom, telephone, codeParrain } = data;
+            
+            // Validation
+            if (!email || !password || !nom || !prenom || !telephone) {
+                throw new Error('Tous les champs sont obligatoires');
+            }
+            
+            // Vérifier si c'est le premier utilisateur (racine)
+            const usersSnapshot = await db.collection('users').limit(1).get();
+            const isFirstUser = usersSnapshot.empty;
+            
+            let parrainDoc = null;
+            let parrainData = null;
+            
+            // Si ce n'est pas le premier utilisateur, vérifier le code parrain
+            if (!isFirstUser) {
+                if (!codeParrain) {
+                    throw new Error('Code parrain obligatoire');
+                }
+                
+                // Rechercher le parrain par code
+                const parrainQuery = await db.collection('users')
+                    .where('codeMembre', '==', codeParrain)
+                    .limit(1)
+                    .get();
+                
+                if (parrainQuery.empty) {
+                    throw new Error('Code parrain inexistant');
+                }
+                
+                parrainDoc = parrainQuery.docs[0];
+                parrainData = parrainDoc.data();
+            }
+            
+            // Créer l'utilisateur Firebase Auth
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            
+            // Mettre à jour le profil
+            await user.updateProfile({
+                displayName: `${prenom} ${nom}`
+            });
+            
+            // Générer le code membre
+            const codeMembre = await generateMemberCode();
+            
+            // Déterminer la position dans l'arbre
+            let parentId = null;
+            let position = null;
+            let parrainId = null;
+            
+            if (!isFirstUser) {
+                // Trouver la racine
+                const racineQuery = await db.collection('users')
+                    .where('position', '==', null)
+                    .limit(1)
+                    .get();
+                
+                let racineId;
+                if (racineQuery.empty) {
+                    // Si pas de racine trouvée, prendre le premier utilisateur
+                    const firstUser = await db.collection('users')
+                        .orderBy('dateInscription')
+                        .limit(1)
+                        .get();
+                    racineId = firstUser.docs[0].id;
+                } else {
+                    racineId = racineQuery.docs[0].id;
+                }
+                
+                const positionInfo = await findNextAvailablePosition(racineId);
+                parentId = positionInfo.parentId;
+                position = positionInfo.position;
+                parrainId = parrainDoc.id;
+            }
+            
+            // Créer le document utilisateur
+            const userData = {
+                uid: user.uid,
+                codeMembre: codeMembre,
+                nom: nom,
+                prenom: prenom,
+                telephone: telephone,
+                email: email,
+                codeParrain: codeParrain || null,
+                parrainId: parrainId,
+                parentId: parentId,
+                position: position,
+                leftChildId: null,
+                rightChildId: null,
+                dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                statut: 'actif',
+                role: isFirstUser ? 'admin' : 'member',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            // Utiliser une transaction pour tout sauvegarder atomiquement
+            await db.runTransaction(async (transaction) => {
+                // Sauvegarder l'utilisateur
+                transaction.set(db.collection('users').doc(user.uid), userData);
+                
+                // Mettre à jour le parent
+                if (parentId) {
+                    const parentRef = db.collection('users').doc(parentId);
+                    const updateData = {};
+                    if (position === 'left') {
+                        updateData.leftChildId = user.uid;
+                    } else if (position === 'right') {
+                        updateData.rightChildId = user.uid;
+                    }
+                    transaction.update(parentRef, updateData);
+                }
+            });
+            
+            return {
+                success: true,
+                uid: user.uid,
+                codeMembre: codeMembre,
+                message: 'Inscription réussie'
+            };
+        }
+
+        // ============================================
+        // GESTION DU FORMULAIRE
+        // ============================================
 
         const form = document.getElementById('inscriptionForm');
         const errorDiv = document.getElementById('errorMessage');
@@ -195,7 +370,6 @@
         const passwordStrength = document.getElementById('passwordStrength');
         const passwordHelp = document.getElementById('passwordHelp');
 
-        // Fonction pour afficher les erreurs
         function showError(message) {
             errorDiv.textContent = message;
             errorDiv.classList.remove('hidden');
@@ -206,14 +380,12 @@
             }, 500);
         }
 
-        // Fonction pour afficher le succès
         function showSuccess(message) {
             successDiv.textContent = message;
             successDiv.classList.remove('hidden');
             errorDiv.classList.add('hidden');
         }
 
-        // Fonction pour le chargement
         function setLoading(loading) {
             if (loading) {
                 loadingSpinner.classList.remove('hidden');
@@ -236,7 +408,6 @@
             return strength;
         }
 
-        // Mettre à jour l'indicateur de force du mot de passe
         passwordInput.addEventListener('input', function() {
             const password = this.value;
             const strength = checkPasswordStrength(password);
@@ -250,7 +421,6 @@
             passwordHelp.style.color = colors[strength] || '#e5e7eb';
         });
 
-        // Vérifier si les mots de passe correspondent
         confirmPasswordInput.addEventListener('input', function() {
             if (this.value && this.value !== passwordInput.value) {
                 this.style.borderColor = '#ef4444';
@@ -263,7 +433,6 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Récupérer les valeurs
             const nom = document.getElementById('nom').value.trim();
             const prenom = document.getElementById('prenom').value.trim();
             const telephone = document.getElementById('telephone').value.trim();
@@ -294,12 +463,10 @@
                 return;
             }
 
+            // Vérifier si c'est le premier utilisateur
             if (!codeParrain) {
-                // Vérifier si c'est le premier utilisateur
                 try {
-                    const { getFirestore, collection, getDocs, limit } = await import("firebase-firestore");
-                    const db = window.db;
-                    const usersSnapshot = await getDocs(collection(db, 'users'), limit(1));
+                    const usersSnapshot = await db.collection('users').limit(1).get();
                     if (!usersSnapshot.empty) {
                         showError('Le code du parrain est obligatoire');
                         return;
@@ -315,8 +482,6 @@
             errorDiv.classList.add('hidden');
 
             try {
-                // Appeler la Cloud Function
-                const inscrireMembre = httpsCallable(functions, 'inscrireMembre');
                 const result = await inscrireMembre({
                     nom,
                     prenom,
@@ -326,39 +491,34 @@
                     codeParrain: codeParrain || null
                 });
 
-                const data = result.data;
-                
-                if (data.success) {
+                if (result.success) {
                     showSuccess('Inscription réussie ! Redirection...');
                     
-                    // Rediriger vers le dashboard après 2 secondes
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
                     }, 2000);
-                } else {
-                    showError(data.message || 'Erreur lors de l\'inscription');
-                    setLoading(false);
                 }
 
             } catch (error) {
                 console.error('Erreur détaillée:', error);
                 
-                // Gérer les erreurs spécifiques
-                if (error.code === 'already-exists' || error.message?.includes('already-exists')) {
+                if (error.code === 'auth/email-already-in-use' || error.message?.includes('email-already-in-use')) {
                     showError('Cet email est déjà utilisé');
-                } else if (error.code === 'not-found' || error.message?.includes('not-found')) {
+                } else if (error.code === 'auth/weak-password') {
+                    showError('Mot de passe trop faible');
+                } else if (error.code === 'auth/invalid-email') {
+                    showError('Email invalide');
+                } else if (error.message?.includes('Code parrain inexistant')) {
                     showError('Code parrain inexistant');
-                } else if (error.code === 'invalid-argument' || error.message?.includes('invalid-argument')) {
-                    showError('Données invalides : ' + error.message);
                 } else {
-                    showError('Une erreur est survenue lors de l\'inscription. Veuillez réessayer.');
+                    showError('Une erreur est survenue. Veuillez réessayer.');
                 }
                 setLoading(false);
             }
         });
 
         // Vérifier si l'utilisateur est déjà connecté
-        onAuthStateChanged(auth, (user) => {
+        auth.onAuthStateChanged((user) => {
             if (user) {
                 window.location.href = 'dashboard.html';
             }
