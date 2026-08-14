@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Vérifier si l'utilisateur est admin
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Vérifier si l'utilisateur est le propriétaire
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /users/{userId} {
+      // Lecture: l'utilisateur peut lire son propre profil ou l'admin peut tout lire
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Écriture: l'utilisateur peut modifier son propre profil (sauf champs critiques)
+      allow update: if isOwner(userId) && 
+        !('parentId' in request.resource.data) &&
+        !('position' in request.resource.data) &&
+        !('leftChildId' in request.resource.data) &&
+        !('rightChildId' in request.resource.data) &&
+        !('parrainId' in request.resource.data) &&
+        !('codeMembre' in request.resource.data);
+      
+      // L'admin peut tout modifier
+      allow update: if isAdmin();
+      
+      // Création: seulement via Cloud Functions
+      allow create: if false;
+      
+      // Suppression: seulement admin
+      allow delete: if isAdmin();
+    }
+    
+    // Compteurs (pour les codes membres)
+    match /counters/{counter} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
