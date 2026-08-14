@@ -11,7 +11,6 @@
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-functions-compat.js"></script>
 
     <style>
         .gradient-bg {
@@ -53,6 +52,46 @@
             background: #fee2e2;
             color: #991b1b;
         }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .quick-action-card {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .quick-action-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .member-row:hover {
+            background: #f8fafc;
+        }
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .stat-icon-blue { background: #dbeafe; color: #2563eb; }
+        .stat-icon-green { background: #dcfce7; color: #16a34a; }
+        .stat-icon-red { background: #fee2e2; color: #dc2626; }
+        .stat-icon-purple { background: #f3e8ff; color: #9333ea; }
+        .stat-icon-orange { background: #fef3c7; color: #d97706; }
+        .stat-icon-pink { background: #fce7f3; color: #db2777; }
     </style>
 </head>
 <body>
@@ -71,12 +110,19 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const functions = firebase.functions();
         db.settings({ timestampsInSnapshots: true });
     </script>
 
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-spinner">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-gray-600">Chargement du dashboard admin...</p>
+        </div>
+    </div>
+
     <!-- Sidebar -->
-    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 hidden">
         <div class="flex flex-col h-full">
             <div class="flex items-center justify-center h-16 border-b">
                 <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
@@ -113,7 +159,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="md:ml-64">
+    <div id="mainContent" class="md:ml-64 hidden">
         <!-- Top Bar -->
         <header class="bg-white shadow-sm fixed top-0 right-0 left-0 md:left-64 z-30">
             <div class="flex items-center justify-between px-4 py-3">
@@ -133,20 +179,31 @@
         <main class="pt-20 px-4 pb-8">
             <!-- Welcome Banner -->
             <div class="gradient-bg rounded-2xl p-6 text-white mb-8">
-                <h1 class="text-2xl font-bold">Dashboard Administrateur</h1>
-                <p class="mt-2 opacity-90">Gérez votre communauté</p>
+                <div class="flex flex-wrap justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold" id="welcomeText">Dashboard Administrateur</h1>
+                        <p class="mt-2 opacity-90">Gérez votre communauté</p>
+                    </div>
+                    <div class="mt-2 md:mt-0">
+                        <button onclick="window.location.href='membres.html?action=add'" 
+                                class="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition flex items-center">
+                            <i class="fas fa-user-plus mr-2"></i>
+                            Nouveau membre
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Statistiques -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                 <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-gray-500">Total Membres</p>
                             <p class="text-2xl font-bold text-gray-800" id="totalMembres">0</p>
                         </div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-users text-blue-600 text-xl"></i>
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="fas fa-users"></i>
                         </div>
                     </div>
                 </div>
@@ -157,8 +214,8 @@
                             <p class="text-sm text-gray-500">Membres Actifs</p>
                             <p class="text-2xl font-bold text-gray-800" id="membresActifs">0</p>
                         </div>
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user-check text-green-600 text-xl"></i>
+                        <div class="stat-icon stat-icon-green">
+                            <i class="fas fa-user-check"></i>
                         </div>
                     </div>
                 </div>
@@ -166,11 +223,23 @@
                 <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-500">Membres Suspendus</p>
+                            <p class="text-sm text-gray-500">Suspendus</p>
                             <p class="text-2xl font-bold text-gray-800" id="membresSuspendus">0</p>
                         </div>
-                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user-slash text-red-600 text-xl"></i>
+                        <div class="stat-icon stat-icon-red">
+                            <i class="fas fa-user-slash"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Taux d'activité</p>
+                            <p class="text-2xl font-bold text-gray-800" id="tauxActivite">0%</p>
+                        </div>
+                        <div class="stat-icon stat-icon-purple">
+                            <i class="fas fa-chart-line"></i>
                         </div>
                     </div>
                 </div>
@@ -181,44 +250,55 @@
                             <p class="text-sm text-gray-500">Inscrits aujourd'hui</p>
                             <p class="text-2xl font-bold text-gray-800" id="inscritsAujourdhui">0</p>
                         </div>
-                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-calendar-day text-purple-600 text-xl"></i>
+                        <div class="stat-icon stat-icon-orange">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Cette semaine</p>
+                            <p class="text-2xl font-bold text-gray-800" id="inscritsSemaine">0</p>
+                        </div>
+                        <div class="stat-icon stat-icon-pink">
+                            <i class="fas fa-calendar-week"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition">
-                    <i class="fas fa-user-plus text-4xl text-blue-600 mb-3"></i>
-                    <h3 class="font-bold text-gray-800">Ajouter un membre</h3>
-                    <p class="text-sm text-gray-500 mt-1">Inscrire un nouveau membre</p>
-                    <button onclick="window.location.href='membres.html?action=add'" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
-                        Ajouter
-                    </button>
+            <!-- Actions Rapides -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-4 text-center quick-action-card" onclick="window.location.href='membres.html?action=add'">
+                    <i class="fas fa-user-plus text-3xl text-blue-600 mb-2"></i>
+                    <h3 class="font-semibold text-gray-800 text-sm">Ajouter</h3>
+                    <p class="text-xs text-gray-500">Nouveau membre</p>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition">
-                    <i class="fas fa-sitemap text-4xl text-green-600 mb-3"></i>
-                    <h3 class="font-bold text-gray-800">Voir l'arbre</h3>
-                    <p class="text-sm text-gray-500 mt-1">Visualiser l'arbre complet</p>
-                    <button onclick="window.location.href='../arbre.html'" class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
-                        Visualiser
-                    </button>
+                <div class="bg-white rounded-xl shadow-sm p-4 text-center quick-action-card" onclick="window.location.href='membres.html'">
+                    <i class="fas fa-users text-3xl text-green-600 mb-2"></i>
+                    <h3 class="font-semibold text-gray-800 text-sm">Gérer</h3>
+                    <p class="text-xs text-gray-500">Les membres</p>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition">
-                    <i class="fas fa-chart-bar text-4xl text-purple-600 mb-3"></i>
-                    <h3 class="font-bold text-gray-800">Statistiques</h3>
-                    <p class="text-sm text-gray-500 mt-1">Voir les statistiques détaillées</p>
-                    <button onclick="window.location.href='statistiques.html'" class="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm">
-                        Voir
-                    </button>
+                <div class="bg-white rounded-xl shadow-sm p-4 text-center quick-action-card" onclick="window.location.href='statistiques.html'">
+                    <i class="fas fa-chart-bar text-3xl text-purple-600 mb-2"></i>
+                    <h3 class="font-semibold text-gray-800 text-sm">Statistiques</h3>
+                    <p class="text-xs text-gray-500">Analyses</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4 text-center quick-action-card" onclick="window.location.href='../arbre.html'">
+                    <i class="fas fa-sitemap text-3xl text-orange-600 mb-2"></i>
+                    <h3 class="font-semibold text-gray-800 text-sm">Arbre</h3>
+                    <p class="text-xs text-gray-500">Visualiser</p>
                 </div>
             </div>
 
             <!-- Derniers membres -->
             <div class="bg-white rounded-xl shadow-sm p-6">
-                <h2 class="text-lg font-bold text-gray-800 mb-4">Derniers membres inscrits</h2>
+                <div class="flex flex-wrap justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">Derniers membres inscrits</h2>
+                    <a href="membres.html" class="text-sm text-blue-600 hover:text-blue-700">Voir tous →</a>
+                </div>
                 <div id="derniersMembres" class="space-y-2">
                     <p class="text-gray-500 text-center py-4">Chargement...</p>
                 </div>
@@ -227,8 +307,9 @@
     </div>
 
     <!-- Modal Ajouter Membre -->
-    <div id="addMemberModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+    <div id="addMemberModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold text-gray-800">Ajouter un membre</h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
@@ -239,33 +320,40 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Nom *</label>
-                        <input type="text" id="adminNom" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <input type="text" id="adminNom" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Prénom *</label>
-                        <input type="text" id="adminPrenom" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <input type="text" id="adminPrenom" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Téléphone *</label>
-                    <input type="tel" id="adminTelephone" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="tel" id="adminTelephone" required 
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email *</label>
-                    <input type="email" id="adminEmail" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="email" id="adminEmail" required 
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Mot de passe *</label>
-                    <input type="password" id="adminPassword" required minlength="8" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="password" id="adminPassword" required minlength="8" 
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Code du parrain *</label>
-                    <input type="text" id="adminCodeParrain" placeholder="Ex: MB000001" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <p class="mt-1 text-xs text-gray-500">Le membre sera placé automatiquement sous le parrain</p>
+                    <input type="text" id="adminCodeParrain" placeholder="Ex: MB000001" required 
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <p class="mt-1 text-xs text-gray-500">Le membre sera placé automatiquement</p>
                 </div>
                 <div id="adminError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
                 <div id="adminSuccess" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm"></div>
-                <button type="submit" id="adminSubmitBtn" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition">
+                <button type="submit" id="adminSubmitBtn" 
+                        class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition">
                     <i class="fas fa-spinner fa-spin hidden mr-2" id="adminLoading"></i>
                     <span id="adminBtnText">Ajouter le membre</span>
                 </button>
@@ -275,22 +363,47 @@
 
     <script>
         let currentUser = null;
-        let isAdmin = false;
+        let currentUserData = null;
 
-        // Sidebar toggle
+        // ============================================
+        // FONCTIONS D'AFFICHAGE
+        // ============================================
+
+        function showLoading(show) {
+            document.getElementById('loadingScreen').style.display = show ? 'flex' : 'none';
+        }
+
+        function showMainContent(show) {
+            document.getElementById('sidebar').classList.toggle('hidden', !show);
+            document.getElementById('mainContent').classList.toggle('hidden', !show);
+        }
+
+        // ============================================
+        // GESTION DE LA SIDEBAR
+        // ============================================
+
         document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
         });
 
-        // Déconnexion
+        // ============================================
+        // DÉCONNEXION
+        // ============================================
+
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             auth.signOut().then(() => {
                 window.location.href = '../connexion.html';
+            }).catch((error) => {
+                console.error('Erreur déconnexion:', error);
+                alert('Erreur lors de la déconnexion');
             });
         });
 
-        // Ouvrir le modal
+        // ============================================
+        // MODAL AJOUT MEMBRE
+        // ============================================
+
         document.getElementById('ajouterMembreBtn').addEventListener('click', function(e) {
             e.preventDefault();
             openModal();
@@ -307,14 +420,16 @@
             document.getElementById('addMemberModal').classList.add('hidden');
         }
 
-        // Fermer le modal en cliquant en dehors
         document.getElementById('addMemberModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeModal();
             }
         });
 
-        // Soumission du formulaire admin
+        // ============================================
+        // AJOUT MEMBRE PAR ADMIN
+        // ============================================
+
         document.getElementById('adminAddForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -331,7 +446,6 @@
             const loading = document.getElementById('adminLoading');
             const btnText = document.getElementById('adminBtnText');
 
-            // Validation
             if (!nom || !prenom || !telephone || !email || !password || !codeParrain) {
                 errorDiv.textContent = 'Tous les champs sont obligatoires';
                 errorDiv.classList.remove('hidden');
@@ -346,49 +460,33 @@
                 return;
             }
 
-            // Désactiver le bouton
             loading.classList.remove('hidden');
             btnText.textContent = 'Ajout en cours...';
             submitBtn.disabled = true;
             errorDiv.classList.add('hidden');
 
             try {
-                // Appeler la Cloud Function
-                const inscrireMembre = functions.httpsCallable('inscrireMembre');
-                const result = await inscrireMembre({
-                    nom,
-                    prenom,
-                    telephone,
-                    email,
-                    password,
-                    codeParrain: codeParrain
+                // Utiliser la même fonction d'inscription
+                const result = await inscrireMembreAdmin({
+                    nom, prenom, telephone, email, password, codeParrain
                 });
 
-                if (result.data.success) {
-                    successDiv.textContent = '✅ Membre ajouté avec succès ! Code: ' + result.data.codeMembre;
+                if (result.success) {
+                    successDiv.textContent = '✅ Membre ajouté avec succès ! Code: ' + result.codeMembre;
                     successDiv.classList.remove('hidden');
-                    errorDiv.classList.add('hidden');
-                    
-                    // Réinitialiser le formulaire
                     document.getElementById('adminAddForm').reset();
-                    
-                    // Recharger les stats
                     loadStats();
-                    
-                    // Fermer le modal après 2 secondes
                     setTimeout(() => {
                         closeModal();
                     }, 2000);
                 }
             } catch (error) {
                 console.error('Erreur:', error);
-                let message = 'Erreur lors de l\'ajout du membre';
-                if (error.message.includes('already-exists')) {
+                let message = 'Erreur lors de l\'ajout';
+                if (error.message?.includes('already-exists') || error.code === 'auth/email-already-in-use') {
                     message = 'Cet email est déjà utilisé';
-                } else if (error.message.includes('not-found')) {
+                } else if (error.message?.includes('not-found')) {
                     message = 'Code parrain inexistant';
-                } else if (error.message.includes('invalid-argument')) {
-                    message = 'Données invalides';
                 }
                 errorDiv.textContent = '❌ ' + message;
                 errorDiv.classList.remove('hidden');
@@ -400,18 +498,179 @@
             }
         });
 
-        // Charger les statistiques
+        // ============================================
+        // FONCTIONS DE DONNÉES
+        // ============================================
+
+        async function inscrireMembreAdmin(data) {
+            const { email, password, nom, prenom, telephone, codeParrain } = data;
+            
+            // Vérifier le code parrain
+            const parrainQuery = await db.collection('users')
+                .where('codeMembre', '==', codeParrain)
+                .limit(1)
+                .get();
+            
+            if (parrainQuery.empty) {
+                throw new Error('Code parrain inexistant');
+            }
+            
+            const parrainDoc = parrainQuery.docs[0];
+            
+            // Créer l'utilisateur
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            
+            await user.updateProfile({
+                displayName: `${prenom} ${nom}`
+            });
+            
+            // Générer le code membre
+            const codeMembre = await generateMemberCode();
+            
+            // Trouver la racine
+            const racineQuery = await db.collection('users')
+                .where('position', '==', null)
+                .limit(1)
+                .get();
+            
+            let racineId;
+            if (racineQuery.empty) {
+                const firstUser = await db.collection('users')
+                    .orderBy('dateInscription')
+                    .limit(1)
+                    .get();
+                racineId = firstUser.docs[0].id;
+            } else {
+                racineId = racineQuery.docs[0].id;
+            }
+            
+            const positionInfo = await findNextAvailablePosition(racineId);
+            const parentId = positionInfo.parentId;
+            const position = positionInfo.position;
+            
+            const userData = {
+                uid: user.uid,
+                codeMembre: codeMembre,
+                nom: nom,
+                prenom: prenom,
+                telephone: telephone,
+                email: email,
+                codeParrain: codeParrain,
+                parrainId: parrainDoc.id,
+                parentId: parentId,
+                position: position,
+                leftChildId: null,
+                rightChildId: null,
+                dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                statut: 'actif',
+                role: 'member',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            await db.runTransaction(async (transaction) => {
+                transaction.set(db.collection('users').doc(user.uid), userData);
+                
+                if (parentId) {
+                    const parentRef = db.collection('users').doc(parentId);
+                    const updateData = {};
+                    if (position === 'left') {
+                        updateData.leftChildId = user.uid;
+                    } else if (position === 'right') {
+                        updateData.rightChildId = user.uid;
+                    }
+                    transaction.update(parentRef, updateData);
+                }
+            });
+            
+            return {
+                success: true,
+                uid: user.uid,
+                codeMembre: codeMembre
+            };
+        }
+
+        async function generateMemberCode() {
+            const counterRef = db.collection('counters').doc('memberCode');
+            
+            try {
+                const result = await db.runTransaction(async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    
+                    let currentNumber;
+                    if (!counterDoc.exists) {
+                        currentNumber = 1;
+                        transaction.set(counterRef, { currentNumber });
+                    } else {
+                        currentNumber = counterDoc.data().currentNumber + 1;
+                        transaction.update(counterRef, { currentNumber });
+                    }
+                    
+                    return currentNumber;
+                });
+                
+                return `MB${String(result).padStart(6, '0')}`;
+            } catch (error) {
+                console.error('Erreur génération code:', error);
+                return `MB${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`;
+            }
+        }
+
+        async function findNextAvailablePosition(racineId) {
+            if (!racineId) {
+                return { parentId: null, position: null };
+            }
+            
+            const queue = [racineId];
+            const visited = new Set();
+            
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+                
+                try {
+                    const currentDoc = await db.collection('users').doc(currentId).get();
+                    if (!currentDoc.exists) continue;
+                    
+                    const currentData = currentDoc.data();
+                    
+                    if (!currentData.leftChildId) {
+                        return { parentId: currentId, position: 'left' };
+                    }
+                    queue.push(currentData.leftChildId);
+                    
+                    if (!currentData.rightChildId) {
+                        return { parentId: currentId, position: 'right' };
+                    }
+                    queue.push(currentData.rightChildId);
+                } catch (error) {
+                    console.error('Erreur BFS:', error);
+                }
+            }
+            
+            return { parentId: racineId, position: 'left' };
+        }
+
+        // ============================================
+        // CHARGEMENT DES STATISTIQUES
+        // ============================================
+
         async function loadStats() {
             try {
                 const snapshot = await db.collection('users').get();
-                let total = 0;
-                let actifs = 0;
-                let suspendus = 0;
-                let aujourdhui = 0;
-
-                const today = new Date();
+                let total = 0, actifs = 0, suspendus = 0;
+                let aujourdhui = 0, cetteSemaine = 0;
+                const derniers = [];
+                
+                const now = new Date();
+                const today = new Date(now);
                 today.setHours(0, 0, 0, 0);
-
+                
+                const weekStart = new Date(today);
+                weekStart.setDate(weekStart.getDate() - 7);
+                
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     total++;
@@ -422,38 +681,43 @@
                     if (data.dateInscription) {
                         const date = data.dateInscription.toDate ? data.dateInscription.toDate() : new Date(data.dateInscription);
                         if (date >= today) aujourdhui++;
-                    }
-                });
-
-                document.getElementById('totalMembres').textContent = total;
-                document.getElementById('membresActifs').textContent = actifs;
-                document.getElementById('membresSuspendus').textContent = suspendus;
-                document.getElementById('inscritsAujourdhui').textContent = aujourdhui;
-
-                // Derniers membres
-                const derniers = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.dateInscription) {
+                        if (date >= weekStart) cetteSemaine++;
+                        
                         derniers.push({
                             id: doc.id,
                             ...data,
-                            date: data.dateInscription.toDate ? data.dateInscription.toDate() : new Date(data.dateInscription)
+                            date: date
                         });
                     }
                 });
+                
+                const taux = total > 0 ? Math.round((actifs / total) * 100) : 0;
+                
+                document.getElementById('totalMembres').textContent = total;
+                document.getElementById('membresActifs').textContent = actifs;
+                document.getElementById('membresSuspendus').textContent = suspendus;
+                document.getElementById('tauxActivite').textContent = taux + '%';
+                document.getElementById('inscritsAujourdhui').textContent = aujourdhui;
+                document.getElementById('inscritsSemaine').textContent = cetteSemaine;
+                
+                // Derniers membres
                 derniers.sort((a, b) => b.date - a.date);
                 const derniers5 = derniers.slice(0, 5);
-
+                
                 const container = document.getElementById('derniersMembres');
                 if (derniers5.length === 0) {
                     container.innerHTML = '<p class="text-gray-500 text-center py-4">Aucun membre inscrit</p>';
                 } else {
                     container.innerHTML = derniers5.map(m => `
-                        <div class="flex items-center justify-between py-2 border-b last:border-0">
-                            <div>
-                                <span class="font-medium">${m.prenom} ${m.nom}</span>
-                                <span class="text-sm text-gray-500 ml-2">${m.codeMembre}</span>
+                        <div class="flex items-center justify-between py-2 border-b last:border-0 hover:bg-gray-50 px-2 rounded">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-bold">
+                                    ${m.prenom?.charAt(0) || 'U'}
+                                </div>
+                                <div>
+                                    <span class="font-medium">${m.prenom} ${m.nom}</span>
+                                    <span class="text-sm text-gray-500 ml-2 font-mono">${m.codeMembre}</span>
+                                </div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="status-badge ${m.statut === 'actif' ? 'status-active' : 'status-suspended'}">${m.statut}</span>
@@ -468,7 +732,10 @@
             }
         }
 
-        // Vérifier l'authentification et le rôle admin
+        // ============================================
+        // AUTHENTIFICATION
+        // ============================================
+
         auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = '../connexion.html';
@@ -477,23 +744,70 @@
 
             try {
                 const userDoc = await db.collection('users').doc(user.uid).get();
-                if (!userDoc.exists || userDoc.data().role !== 'admin') {
+                
+                if (!userDoc.exists) {
+                    // Créer le document si nécessaire
+                    await createAdminDocument(user);
+                    return;
+                }
+                
+                const data = userDoc.data();
+                
+                // Vérifier si c'est un admin
+                if (data.role !== 'admin') {
                     window.location.href = '../dashboard.html';
                     return;
                 }
-
+                
                 currentUser = user;
-                isAdmin = true;
-                const data = userDoc.data();
+                currentUserData = data;
+                
                 document.getElementById('adminName').textContent = `${data.prenom} ${data.nom}`;
                 document.getElementById('adminInitial').textContent = data.prenom.charAt(0).toUpperCase();
+                document.getElementById('welcomeText').textContent = `Bonjour ${data.prenom} !`;
+                
+                showLoading(false);
+                showMainContent(true);
                 
                 loadStats();
+                
             } catch (error) {
                 console.error('Erreur vérification admin:', error);
                 window.location.href = '../dashboard.html';
             }
         });
+
+        async function createAdminDocument(user) {
+            try {
+                const codeMembre = await generateMemberCode();
+                
+                const userData = {
+                    uid: user.uid,
+                    codeMembre: codeMembre,
+                    nom: 'Admin',
+                    prenom: 'Admin',
+                    telephone: 'Non renseigné',
+                    email: user.email,
+                    codeParrain: null,
+                    parrainId: null,
+                    parentId: null,
+                    position: null,
+                    leftChildId: null,
+                    rightChildId: null,
+                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                    statut: 'actif',
+                    role: 'admin',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('users').doc(user.uid).set(userData);
+                window.location.reload();
+            } catch (error) {
+                console.error('Erreur création document admin:', error);
+                window.location.href = '../dashboard.html';
+            }
+        }
     </script>
 </body>
 </html>
