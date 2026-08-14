@@ -33,9 +33,32 @@
             border-radius: 2px;
             transition: all 0.3s;
         }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-gray-700">Inscription en cours...</p>
+        </div>
+    </div>
+
     <!-- Configuration Firebase -->
     <script>
         const firebaseConfig = {
@@ -164,6 +187,17 @@
         // FONCTIONS UTILITAIRES
         // ============================================
 
+        // Vérifier si c'est le premier utilisateur
+        async function isFirstUser() {
+            try {
+                const snapshot = await db.collection('users').limit(1).get();
+                return snapshot.empty;
+            } catch (error) {
+                console.error('Erreur vérification premier utilisateur:', error);
+                return false;
+            }
+        }
+
         // Générer un code membre unique
         async function generateMemberCode() {
             const counterRef = db.collection('counters').doc('memberCode');
@@ -205,26 +239,59 @@
                 if (visited.has(currentId)) continue;
                 visited.add(currentId);
                 
-                const currentDoc = await db.collection('users').doc(currentId).get();
-                
-                if (!currentDoc.exists) continue;
-                
-                const currentData = currentDoc.data();
-                
-                // Vérifier gauche
-                if (!currentData.leftChildId) {
-                    return { parentId: currentId, position: 'left' };
+                try {
+                    const currentDoc = await db.collection('users').doc(currentId).get();
+                    
+                    if (!currentDoc.exists) continue;
+                    
+                    const currentData = currentDoc.data();
+                    
+                    // Vérifier gauche
+                    if (!currentData.leftChildId) {
+                        return { parentId: currentId, position: 'left' };
+                    }
+                    queue.push(currentData.leftChildId);
+                    
+                    // Vérifier droite
+                    if (!currentData.rightChildId) {
+                        return { parentId: currentId, position: 'right' };
+                    }
+                    queue.push(currentData.rightChildId);
+                } catch (error) {
+                    console.error('Erreur BFS:', error);
                 }
-                queue.push(currentData.leftChildId);
-                
-                // Vérifier droite
-                if (!currentData.rightChildId) {
-                    return { parentId: currentId, position: 'right' };
-                }
-                queue.push(currentData.rightChildId);
             }
             
             return { parentId: racineId, position: 'left' };
+        }
+
+        // Trouver la racine
+        async function findRoot() {
+            try {
+                const racineQuery = await db.collection('users')
+                    .where('position', '==', null)
+                    .limit(1)
+                    .get();
+                
+                if (!racineQuery.empty) {
+                    return racineQuery.docs[0].id;
+                }
+                
+                // Si pas de racine, prendre le premier utilisateur
+                const firstUser = await db.collection('users')
+                    .orderBy('dateInscription')
+                    .limit(1)
+                    .get();
+                
+                if (!firstUser.empty) {
+                    return firstUser.docs[0].id;
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Erreur recherche racine:', error);
+                return null;
+            }
         }
 
         // ============================================
@@ -239,15 +306,14 @@
                 throw new Error('Tous les champs sont obligatoires');
             }
             
-            // Vérifier si c'est le premier utilisateur (racine)
-            const usersSnapshot = await db.collection('users').limit(1).get();
-            const isFirstUser = usersSnapshot.empty;
+            // Vérifier si c'est le premier utilisateur
+            const firstUser = await isFirstUser();
+            console.log('Est-ce le premier utilisateur?', firstUser);
             
             let parrainDoc = null;
-            let parrainData = null;
             
             // Si ce n'est pas le premier utilisateur, vérifier le code parrain
-            if (!isFirstUser) {
+            if (!firstUser) {
                 if (!codeParrain) {
                     throw new Error('Code parrain obligatoire');
                 }
@@ -263,96 +329,102 @@
                 }
                 
                 parrainDoc = parrainQuery.docs[0];
-                parrainData = parrainDoc.data();
+                console.log('Parrain trouvé:', parrainDoc.id);
             }
             
             // Créer l'utilisateur Firebase Auth
-            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-            const user = userCredential.user;
-            
-            // Mettre à jour le profil
-            await user.updateProfile({
-                displayName: `${prenom} ${nom}`
-            });
-            
-            // Générer le code membre
-            const codeMembre = await generateMemberCode();
-            
-            // Déterminer la position dans l'arbre
-            let parentId = null;
-            let position = null;
-            let parrainId = null;
-            
-            if (!isFirstUser) {
-                // Trouver la racine
-                const racineQuery = await db.collection('users')
-                    .where('position', '==', null)
-                    .limit(1)
-                    .get();
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                console.log('Utilisateur créé:', user.uid);
                 
-                let racineId;
-                if (racineQuery.empty) {
-                    // Si pas de racine trouvée, prendre le premier utilisateur
-                    const firstUser = await db.collection('users')
-                        .orderBy('dateInscription')
-                        .limit(1)
-                        .get();
-                    racineId = firstUser.docs[0].id;
-                } else {
-                    racineId = racineQuery.docs[0].id;
-                }
+                // Mettre à jour le profil
+                await user.updateProfile({
+                    displayName: `${prenom} ${nom}`
+                });
                 
-                const positionInfo = await findNextAvailablePosition(racineId);
-                parentId = positionInfo.parentId;
-                position = positionInfo.position;
-                parrainId = parrainDoc.id;
-            }
-            
-            // Créer le document utilisateur
-            const userData = {
-                uid: user.uid,
-                codeMembre: codeMembre,
-                nom: nom,
-                prenom: prenom,
-                telephone: telephone,
-                email: email,
-                codeParrain: codeParrain || null,
-                parrainId: parrainId,
-                parentId: parentId,
-                position: position,
-                leftChildId: null,
-                rightChildId: null,
-                dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
-                statut: 'actif',
-                role: isFirstUser ? 'admin' : 'member',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            // Utiliser une transaction pour tout sauvegarder atomiquement
-            await db.runTransaction(async (transaction) => {
-                // Sauvegarder l'utilisateur
-                transaction.set(db.collection('users').doc(user.uid), userData);
+                // Générer le code membre
+                const codeMembre = await generateMemberCode();
+                console.log('Code membre généré:', codeMembre);
                 
-                // Mettre à jour le parent
-                if (parentId) {
-                    const parentRef = db.collection('users').doc(parentId);
-                    const updateData = {};
-                    if (position === 'left') {
-                        updateData.leftChildId = user.uid;
-                    } else if (position === 'right') {
-                        updateData.rightChildId = user.uid;
+                // Déterminer la position dans l'arbre
+                let parentId = null;
+                let position = null;
+                let parrainId = null;
+                
+                if (!firstUser) {
+                    // Trouver la racine
+                    const rootId = await findRoot();
+                    console.log('Racine trouvée:', rootId);
+                    
+                    if (rootId) {
+                        const positionInfo = await findNextAvailablePosition(rootId);
+                        parentId = positionInfo.parentId;
+                        position = positionInfo.position;
+                        parrainId = parrainDoc.id;
+                        console.log('Position trouvée:', position, 'Parent:', parentId);
+                    } else {
+                        // Cas d'erreur: pas de racine mais pas premier utilisateur
+                        console.error('Pas de racine trouvée mais pas premier utilisateur');
+                        throw new Error('Erreur de structure de l\'arbre');
                     }
-                    transaction.update(parentRef, updateData);
                 }
-            });
-            
-            return {
-                success: true,
-                uid: user.uid,
-                codeMembre: codeMembre,
-                message: 'Inscription réussie'
-            };
+                
+                // Créer le document utilisateur
+                const userData = {
+                    uid: user.uid,
+                    codeMembre: codeMembre,
+                    nom: nom,
+                    prenom: prenom,
+                    telephone: telephone,
+                    email: email,
+                    codeParrain: codeParrain || null,
+                    parrainId: parrainId,
+                    parentId: parentId,
+                    position: position,
+                    leftChildId: null,
+                    rightChildId: null,
+                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                    statut: 'actif',
+                    role: firstUser ? 'admin' : 'member',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                console.log('Données utilisateur à sauvegarder:', userData);
+                
+                // Utiliser une transaction pour tout sauvegarder atomiquement
+                await db.runTransaction(async (transaction) => {
+                    // Sauvegarder l'utilisateur
+                    transaction.set(db.collection('users').doc(user.uid), userData);
+                    
+                    // Mettre à jour le parent
+                    if (parentId) {
+                        const parentRef = db.collection('users').doc(parentId);
+                        const updateData = {};
+                        if (position === 'left') {
+                            updateData.leftChildId = user.uid;
+                        } else if (position === 'right') {
+                            updateData.rightChildId = user.uid;
+                        }
+                        transaction.update(parentRef, updateData);
+                        console.log('Parent mis à jour:', parentId);
+                    }
+                });
+                
+                console.log('Transaction réussie !');
+                
+                return {
+                    success: true,
+                    uid: user.uid,
+                    codeMembre: codeMembre,
+                    message: 'Inscription réussie'
+                };
+                
+            } catch (error) {
+                console.error('Erreur dans l\'inscription:', error);
+                throw error;
+            }
         }
 
         // ============================================
@@ -364,6 +436,7 @@
         const successDiv = document.getElementById('successMessage');
         const submitBtn = document.getElementById('submitBtn');
         const loadingSpinner = document.getElementById('loadingSpinner');
+        const loadingOverlay = document.getElementById('loadingOverlay');
         const btnText = document.getElementById('btnText');
         const passwordInput = document.getElementById('password');
         const confirmPasswordInput = document.getElementById('confirmPassword');
@@ -388,10 +461,12 @@
 
         function setLoading(loading) {
             if (loading) {
+                loadingOverlay.classList.add('active');
                 loadingSpinner.classList.remove('hidden');
                 btnText.textContent = 'Inscription en cours...';
                 submitBtn.disabled = true;
             } else {
+                loadingOverlay.classList.remove('active');
                 loadingSpinner.classList.add('hidden');
                 btnText.textContent = "S'inscrire";
                 submitBtn.disabled = false;
@@ -466,14 +541,14 @@
             // Vérifier si c'est le premier utilisateur
             if (!codeParrain) {
                 try {
-                    const usersSnapshot = await db.collection('users').limit(1).get();
-                    if (!usersSnapshot.empty) {
+                    const firstUser = await isFirstUser();
+                    if (!firstUser) {
                         showError('Le code du parrain est obligatoire');
                         return;
                     }
                 } catch (error) {
                     console.error('Erreur vérification:', error);
-                    showError('Erreur lors de la vérification');
+                    showError('Erreur lors de la vérification du premier utilisateur');
                     return;
                 }
             }
@@ -492,7 +567,7 @@
                 });
 
                 if (result.success) {
-                    showSuccess('Inscription réussie ! Redirection...');
+                    showSuccess('✅ Inscription réussie ! Redirection...');
                     
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
@@ -502,17 +577,25 @@
             } catch (error) {
                 console.error('Erreur détaillée:', error);
                 
-                if (error.code === 'auth/email-already-in-use' || error.message?.includes('email-already-in-use')) {
-                    showError('Cet email est déjà utilisé');
+                let errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+                
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'Cet email est déjà utilisé';
                 } else if (error.code === 'auth/weak-password') {
-                    showError('Mot de passe trop faible');
+                    errorMessage = 'Mot de passe trop faible';
                 } else if (error.code === 'auth/invalid-email') {
-                    showError('Email invalide');
+                    errorMessage = 'Email invalide';
                 } else if (error.message?.includes('Code parrain inexistant')) {
-                    showError('Code parrain inexistant');
-                } else {
-                    showError('Une erreur est survenue. Veuillez réessayer.');
+                    errorMessage = 'Code parrain inexistant';
+                } else if (error.message?.includes('Code parrain obligatoire')) {
+                    errorMessage = 'Le code du parrain est obligatoire';
+                } else if (error.message?.includes('Erreur de structure de l\'arbre')) {
+                    errorMessage = 'Erreur de structure. Contactez l\'administrateur.';
+                } else if (error.message) {
+                    errorMessage = error.message;
                 }
+                
+                showError('❌ ' + errorMessage);
                 setLoading(false);
             }
         });
