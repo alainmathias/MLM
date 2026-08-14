@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Arbre - CommunityTree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .tree-node {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .tree-node:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .tree-line {
+            stroke: #9CA3AF;
+            stroke-width: 2;
+        }
+        .tree-container {
+            overflow: auto;
+            padding: 20px;
+            min-height: 600px;
+        }
+        .tree-svg {
+            min-width: 100%;
+            min-height: 100%;
+        }
+        .zoom-controls {
+            position: sticky;
+            bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            z-index: 10;
+        }
+        .member-card-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        }
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+        .sidebar-link {
+            transition: all 0.2s;
+        }
+        .sidebar-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        .sidebar-link.active {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            border-right: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const firebaseConfig = {
+            apiKey: "VOTRE_API_KEY",
+            authDomain: "VOTRE_AUTH_DOMAIN",
+            projectId: "VOTRE_PROJECT_ID",
+            storageBucket: "VOTRE_STORAGE_BUCKET",
+            messagingSenderId: "VOTRE_SENDER_ID",
+            appId: "VOTRE_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
+
+    <!-- Sidebar -->
+    <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40" id="sidebar">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-center h-16 border-b">
+                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+            </div>
+            
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="dashboard.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-home w-5 h-5 mr-3"></i>
+                    Dashboard
+                </a>
+                <a href="arbre.html" class="sidebar-link active flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-sitemap w-5 h-5 mr-3"></i>
+                    Mon Arbre
+                </a>
+                <a href="profil.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
+                    <i class="fas fa-user w-5 h-5 mr-3"></i>
+                    Mon Profil
+                </a>
+                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50">
+                    <i class="fas fa-sign-out-alt w-5 h-5 mr-3"></i>
+                    Déconnexion
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="md:ml-64">
+        <!-- Top Bar -->
+        <header class="bg-white shadow-sm fixed top-0 right-0 left-0 md:left-64 z-30">
+            <div class="flex items-center justify-between px-4 py-3">
+                <button id="sidebarToggle" class="md:hidden text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600" id="userName">Chargement...</span>
+                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold" id="userInitial">
+                        U
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="pt-20 px-4 pb-8">
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">Mon Arbre</h2>
+                    <div class="flex space-x-2">
+                        <button id="zoomIn" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button id="zoomOut" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button id="resetZoom" class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                            <i class="fas fa-home"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tree-container" id="treeContainer">
+                    <div id="treeWrapper" style="transform-origin: center center;">
+                        <svg id="treeSvg" class="tree-svg" width="100%" height="100%">
+                            <g id="treeGroup"></g>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Member Popup -->
+    <div id="memberPopup" class="hidden">
+        <div class="overlay" onclick="closePopup()"></div>
+        <div class="member-card-popup">
+            <button onclick="closePopup()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="text-center">
+                <div class="w-16 h-16 mx-auto rounded-full gradient-bg flex items-center justify-center text-white text-xl font-bold" id="popupInitial">
+                    U
+                </div>
+                <h3 class="mt-4 text-xl font-bold text-gray-800" id="popupName">---</h3>
+                <p class="text-sm text-gray-500" id="popupCode">---</p>
+            </div>
+            <div class="mt-4 space-y-2">
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-600">Position</span>
+                    <span class="font-medium" id="popupPosition">---</span>
+                </div>
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-600">Parrain</span>
+                    <span class="font-medium" id="popupParrain">---</span>
+                </div>
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-600">Descendants</span>
+                    <span class="font-medium" id="popupDescendants">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let treeData = null;
+        let scale = 1;
+        let membersMap = {};
+
+        // Sidebar toggle
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+
+        // Déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                await auth.signOut();
+                window.location.href = 'connexion.html';
+            } catch (error) {
+                console.error('Erreur déconnexion:', error);
+            }
+        });
+
+        // Zoom controls
+        document.getElementById('zoomIn').addEventListener('click', () => {
+            scale += 0.1;
+            updateZoom();
+        });
+        document.getElementById('zoomOut').addEventListener('click', () => {
+            scale -= 0.1;
+            if (scale < 0.3) scale = 0.3;
+            updateZoom();
+        });
+        document.getElementById('resetZoom').addEventListener('click', () => {
+            scale = 1;
+            updateZoom();
+        });
+
+        function updateZoom() {
+            const wrapper = document.getElementById('treeWrapper');
+            wrapper.style.transform = `scale(${scale})`;
+        }
+
+        // Close popup
+        window.closePopup = function() {
+            document.getElementById('memberPopup').classList.add('hidden');
+        };
+
+        // Ouvrir popup membre
+        function openMemberPopup(memberId) {
+            const member = membersMap[memberId];
+            if (!member) return;
+
+            const popup = document.getElementById('memberPopup');
+            document.getElementById('popupInitial').textContent = member.prenom.charAt(0).toUpperCase();
+            document.getElementById('popupName').textContent = `${member.prenom} ${member.nom}`;
+            document.getElementById('popupCode').textContent = member.codeMembre;
+            
+            const positionMap = {
+                'left': 'Gauche',
+                'right': 'Droite',
+                null: 'Racine'
+            };
+            document.getElementById('popupPosition').textContent = positionMap[member.position] || '---';
+            
+            document.getElementById('popupParrain').textContent = member.parrainId ? 
+                (membersMap[member.parrainId] ? `${membersMap[member.parrainId].prenom} ${membersMap[member.parrainId].nom}` : 'Chargement...') : 
+                'Aucun';
+
+            // Compter les descendants
+            let descendants = 0;
+            const queue = [memberId];
+            while (queue.length > 0) {
+                const id = queue.shift();
+                const data = membersMap[id];
+                if (data.leftChildId) {
+                    descendants++;
+                    queue.push(data.leftChildId);
+                }
+                if (data.rightChildId) {
+                    descendants++;
+                    queue.push(data.rightChildId);
+                }
+            }
+            document.getElementById('popupDescendants').textContent = descendants;
+
+            popup.classList.remove('hidden');
+        }
+
+        // Dessiner l'arbre
+        function drawTree(users) {
+            const svg = document.getElementById('treeGroup');
+            svg.innerHTML = '';
+            
+            // Trouver la racine
+            let rootId = null;
+            for (const [id, data] of Object.entries(users)) {
+                if (!data.position) {
+                    rootId = id;
+                    break;
+                }
+            }
+            
+            if (!rootId) {
+                svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" class="text-gray-500">Aucun arbre disponible</text>';
+                return;
+            }
+
+            membersMap = users;
+
+            // Position des nœuds
+            const positions = {};
+            const nodeWidth = 150;
+            const nodeHeight = 80;
+            const levelHeight = 120;
+            
+            function calculatePositions(nodeId, x, y, level) {
+                if (!nodeId || !users[nodeId]) return;
+                
+                positions[nodeId] = { x, y, level };
+                const data = users[nodeId];
+                
+                if (data.leftChildId) {
+                    calculatePositions(data.leftChildId, x - (nodeWidth * 1.5) / (level + 1), y + levelHeight, level + 1);
+                }
+                if (data.rightChildId) {
+                    calculatePositions(data.rightChildId, x + (nodeWidth * 1.5) / (level + 1), y + levelHeight, level + 1);
+                }
+            }
+
+            calculatePositions(rootId, 0, 0, 0);
+
+            // Ajuster les positions pour centrer
+            let minX = Infinity, maxX = -Infinity;
+            for (const pos of Object.values(positions)) {
+                if (pos.x < minX) minX = pos.x;
+                if (pos.x > maxX) maxX = pos.x;
+            }
+            const centerX = (minX + maxX) / 2;
+            const offsetX = -centerX;
+
+            // Dessiner les lignes
+            for (const [id, pos] of Object.entries(positions)) {
+                const data = users[id];
+                if (data.leftChildId && positions[data.leftChildId]) {
+                    const childPos = positions[data.leftChildId];
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', pos.x + offsetX);
+                    line.setAttribute('y1', pos.y + nodeHeight);
+                    line.setAttribute('x2', childPos.x + offsetX);
+                    line.setAttribute('y2', childPos.y);
+                    line.setAttribute('class', 'tree-line');
+                    svg.appendChild(line);
+                }
+                if (data.rightChildId && positions[data.rightChildId]) {
+                    const childPos = positions[data.rightChildId];
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', pos.x + offsetX + nodeWidth);
+                    line.setAttribute('y1', pos.y + nodeHeight);
+                    line.setAttribute('x2', childPos.x + offsetX + nodeWidth);
+                    line.setAttribute('y2', childPos.y);
+                    line.setAttribute('class', 'tree-line');
+                    svg.appendChild(line);
+                }
+            }
+
+            // Dessiner les nœuds
+            for (const [id, pos] of Object.entries(positions)) {
+                const data = users[id];
+                const isCurrent = id === currentUser.uid;
+                
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                group.setAttribute('transform', `translate(${pos.x + offsetX}, ${pos.y})`);
+                group.setAttribute('class', 'tree-node');
+                group.style.cursor = 'pointer';
+                
+                // Fond du nœud
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('width', nodeWidth);
+                rect.setAttribute('height', nodeHeight);
+                rect.setAttribute('rx', '12');
+                rect.setAttribute('fill', isCurrent ? '#667eea' : '#ffffff');
+                rect.setAttribute('stroke', isCurrent ? '#667eea' : '#e5e7eb');
+                rect.setAttribute('stroke-width', isCurrent ? '3' : '1');
+                rect.setAttribute('filter', 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))');
+                group.appendChild(rect);
+                
+                // Icône
+                const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                icon.setAttribute('x', '20');
+                icon.setAttribute('y', '45');
+                icon.setAttribute('font-size', '24');
+                icon.setAttribute('font-family', 'Font Awesome 6 Free');
+                icon.setAttribute('fill', isCurrent ? '#ffffff' : '#667eea');
+                icon.setAttribute('font-weight', '900');
+                icon.textContent = '\uf007';
+                group.appendChild(icon);
+                
+                // Nom
+                const name = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                name.setAttribute('x', '55');
+                name.setAttribute('y', '35');
+                name.setAttribute('fill', isCurrent ? '#ffffff' : '#1f2937');
+                name.setAttribute('font-size', '14');
+                name.setAttribute('font-weight', '600');
+                name.textContent = `${data.prenom} ${data.nom}`;
+                group.appendChild(name);
+                
+                // Code
+                const code = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                code.setAttribute('x', '55');
+                code.setAttribute('y', '55');
+                code.setAttribute('fill', isCurrent ? '#e5e7eb' : '#6b7280');
+                code.setAttribute('font-size', '11');
+                code.textContent = data.codeMembre;
+                group.appendChild(code);
+                
+                // Position
+                const posLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                posLabel.setAttribute('x', '55');
+                posLabel.setAttribute('y', '70');
+                posLabel.setAttribute('fill', isCurrent ? '#e5e7eb' : '#9ca3af');
+                posLabel.setAttribute('font-size', '10');
+                posLabel.textContent = data.position ? (data.position === 'left' ? '⬅ Gauche' : '➡ Droite') : '⭐ Racine';
+                group.appendChild(posLabel);
+                
+                // Événement click
+                group.addEventListener('click', () => {
+                    openMemberPopup(id);
+                });
+                
+                svg.appendChild(group);
+            }
+
+            // Ajuster la taille du SVG
+            const svgEl = document.getElementById('treeSvg');
+            const container = document.getElementById('treeContainer');
+            const width = Math.max(container.clientWidth, (maxX - minX) + nodeWidth * 2 + 100);
+            const height = Math.max(container.clientHeight, Object.values(positions).length * levelHeight + 200);
+            svgEl.setAttribute('viewBox', `${-width/2} -50 ${width} ${height + 100}`);
+        }
+
+        // Charger l'arbre
+        async function loadTree(user) {
+            try {
+                // Récupérer tous les membres
+                const snapshot = await db.collection('users').get();
+                const users = {};
+                snapshot.forEach(doc => {
+                    users[doc.id] = doc.data();
+                });
+
+                currentUser = user;
+                drawTree(users);
+
+                // Mettre à jour l'interface utilisateur
+                const userData = users[user.uid];
+                if (userData) {
+                    document.getElementById('userName').textContent = `${userData.prenom} ${userData
