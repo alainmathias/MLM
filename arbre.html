@@ -181,24 +181,7 @@
     </style>
 </head>
 <body>
-    <!-- Configuration Firebase -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
-            authDomain: "mlm1-598b5.firebaseapp.com",
-            projectId: "mlm1-598b5",
-            storageBucket: "mlm1-598b5.firebasestorage.app",
-            messagingSenderId: "601982652419",
-            appId: "1:601982652419:web:a34ccee92f95950a63be36",
-            measurementId: "G-DLCVD2MRSC"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        db.settings({ timestampsInSnapshots: true });
-    </script>
-
+    
     <!-- Sidebar -->
     <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
         <div class="flex flex-col h-full">
@@ -309,7 +292,7 @@
     </div>
 
     <script>
-        let currentUser = null;
+        //let currentUser = null;
         let usersMap = {};
         let scale = 1;
         const MIN_SCALE = 0.3;
