@@ -53,13 +53,13 @@
         .tree-container {
             overflow: auto;
             padding: 40px 24px;
-            min-height: 400px;
             background:
                 radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0) 0 0/24px 24px,
                 #f8fafc;
             border-radius: 14px;
             position: relative;
-            max-height: 620px;
+            height: calc(100vh - 260px);
+            min-height: 460px;
         }
         .tree-wrapper {
             display: flex;
@@ -95,6 +95,28 @@
             border-color: var(--brand-1);
             z-index: 10;
         }
+        .tree-node-content:not(.empty) { cursor: pointer; }
+        .tree-node-content.selected {
+            border-color: var(--brand-1);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.25), 0 12px 24px -8px rgba(30,41,59,0.18);
+        }
+        .tree-node-content.root.selected {
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.55), 0 10px 20px -6px rgba(79,70,229,0.45);
+        }
+        .gen-tag {
+            position: absolute;
+            top: -9px;
+            right: -9px;
+            background: #0f172a;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: 0.2px;
+        }
+        .tree-node-content.root .gen-tag { background: rgba(15,23,42,0.75); }
         .node-avatar {
             width: 36px;
             height: 36px;
@@ -266,6 +288,30 @@
             user-select: none;
         }
 
+        /* ===== DETAILS PANEL ===== */
+        .details-panel {
+            width: 100%;
+        }
+        @media (min-width: 1024px) {
+            .tree-layout { display: flex; align-items: flex-start; gap: 24px; }
+            .tree-layout > .tree-card { flex: 1 1 0%; min-width: 0; }
+            .details-panel { width: 340px; flex-shrink: 0; position: sticky; top: 96px; }
+        }
+        .detail-field { border-bottom: 1px solid #f1f5f9; padding: 10px 0; }
+        .detail-field:last-child { border-bottom: none; }
+        .detail-field .label { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
+        .detail-field .value { font-size: 14px; color: var(--ink); font-weight: 500; margin-top: 2px; }
+        .detail-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13.5px;
+            margin-top: 2px;
+            transition: all 0.2s;
+        }
+        .detail-input:focus { outline: none; border-color: var(--brand-1); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+
         @media (max-width: 768px) {
             .tree-children { gap: 18px; }
             .tree-node-content { min-width: 92px; padding: 10px 12px; }
@@ -356,42 +402,126 @@
                 </div>
             </div>
 
-            <!-- Arbre avec Zoom -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                    <h2 class="text-lg font-bold text-slate-800">
-                        <i class="fas fa-sitemap text-indigo-600 mr-2"></i> Arbre — cliquez sur une place libre pour ajouter
-                    </h2>
-                    <div class="flex items-center gap-2">
-                        <div class="zoom-controls">
-                            <button id="zoomOutBtn" class="zoom-btn" title="Dézoomer">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <span class="zoom-level" id="zoomLevel">100%</span>
-                            <button id="zoomInBtn" class="zoom-btn" title="Zoomer">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button id="resetZoomBtn" class="zoom-btn primary" title="Réinitialiser">
-                                <i class="fas fa-compress"></i>
+            <!-- Arbre + Détails -->
+            <div class="tree-layout mb-6">
+                <!-- Arbre avec Zoom -->
+                <div class="tree-card bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                        <h2 class="text-lg font-bold text-slate-800">
+                            <i class="fas fa-sitemap text-indigo-600 mr-2"></i> Arbre — cliquez sur un membre ou une place libre
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <div class="zoom-controls">
+                                <button id="zoomOutBtn" class="zoom-btn" title="Dézoomer">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <span class="zoom-level" id="zoomLevel">100%</span>
+                                <button id="zoomInBtn" class="zoom-btn" title="Zoomer">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button id="resetZoomBtn" class="zoom-btn primary" title="Réinitialiser">
+                                    <i class="fas fa-compress"></i>
+                                </button>
+                            </div>
+                            <button id="refreshTree" class="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition text-sm font-medium">
+                                <i class="fas fa-sync-alt mr-1.5"></i> Rafraîchir
                             </button>
                         </div>
-                        <button id="refreshTree" class="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition text-sm font-medium">
-                            <i class="fas fa-sync-alt mr-1.5"></i> Rafraîchir
-                        </button>
                     </div>
-                </div>
-                <div class="tree-container" id="treeContainer">
-                    <div class="tree-wrapper" id="treeWrapper">
-                        <div id="treeContent" class="flex flex-col items-center">
-                            <div class="text-slate-400 text-center py-6">
-                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                <p>Chargement de l'arbre...</p>
+                    <div class="tree-container" id="treeContainer">
+                        <div class="tree-wrapper" id="treeWrapper">
+                            <div id="treeContent" class="flex flex-col items-center">
+                                <div class="text-slate-400 text-center py-6">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>Chargement de l'arbre...</p>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <div class="mt-3 text-xs text-slate-400 text-center">
+                        <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette — la zone reste scrollable à 100%
+                    </div>
                 </div>
-                <div class="mt-3 text-xs text-slate-400 text-center">
-                    <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette
+
+                <!-- Panneau de détails membre -->
+                <div class="details-panel bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <div id="detailsEmpty" class="text-center text-slate-400 py-12">
+                        <i class="fas fa-user-circle text-4xl mb-3"></i>
+                        <p class="text-sm">Cliquez sur un membre dans l'arbre pour voir ses informations.</p>
+                    </div>
+
+                    <div id="detailsView" class="hidden">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="node-avatar" style="width:44px;height:44px;font-size:15px;margin:0;" id="detailAvatar"></div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-base leading-tight" id="detailName"></p>
+                                    <p class="text-xs text-slate-400 font-mono" id="detailCode"></p>
+                                </div>
+                            </div>
+                            <button onclick="closeMemberDetails()" class="text-slate-300 hover:text-slate-600 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex gap-2 mb-4">
+                            <span class="badge badge-pos" id="detailGen"></span>
+                            <span class="status-badge" id="detailStatus"></span>
+                        </div>
+
+                        <div id="detailFields">
+                            <div class="detail-field"><div class="label">Téléphone</div><div class="value" id="fieldTelephone"></div></div>
+                            <div class="detail-field"><div class="label">Email</div><div class="value" id="fieldEmail"></div></div>
+                            <div class="detail-field"><div class="label">Code parrain</div><div class="value" id="fieldParrain"></div></div>
+                            <div class="detail-field"><div class="label">Position</div><div class="value" id="fieldPosition"></div></div>
+                        </div>
+
+                        <div id="detailEditForm" class="hidden space-y-3 mt-2">
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Prénom</label>
+                                <input type="text" id="editPrenom" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Nom</label>
+                                <input type="text" id="editNom" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Téléphone</label>
+                                <input type="tel" id="editTelephone" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Email</label>
+                                <input type="email" id="editEmail" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Statut</label>
+                                <select id="editStatut" class="detail-input">
+                                    <option value="actif">Actif</option>
+                                    <option value="suspendu">Suspendu</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="detailEditError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs mt-3"></div>
+
+                        <div class="mt-5 hidden gap-2" id="detailActionsView">
+                            <button onclick="enableEditMode()" class="flex-1 py-2.5 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition text-sm font-medium">
+                                <i class="fas fa-pen mr-1.5"></i> Modifier
+                            </button>
+                            <button onclick="deleteMember()" class="flex-1 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition text-sm font-medium">
+                                <i class="fas fa-trash mr-1.5"></i> Supprimer
+                            </button>
+                        </div>
+
+                        <div class="mt-5 hidden gap-2" id="detailActionsEdit">
+                            <button onclick="saveMemberEdit()" class="flex-1 py-2.5 gradient-bg text-white rounded-xl hover:opacity-90 transition text-sm font-medium">
+                                <i class="fas fa-check mr-1.5"></i> Enregistrer
+                            </button>
+                            <button onclick="cancelEditMode()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition text-sm font-medium">
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -586,6 +716,8 @@
         let allMembers = [];
         let usersMap = {};
         let currentSearchTerm = '';
+        let selectedMemberId = null;
+        let currentGenMap = {};
 
         // ============================================
         // HELPERS
@@ -914,22 +1046,184 @@
         }
 
         // ============================================
+        // DÉTAILS MEMBRE
+        // ============================================
+
+        function showMemberDetails(id) {
+            const node = usersMap[id];
+            if (!node) return;
+
+            selectedMemberId = id;
+
+            document.getElementById('detailsEmpty').classList.add('hidden');
+            document.getElementById('detailsView').classList.remove('hidden');
+
+            document.getElementById('detailAvatar').textContent = getInitials(node.prenom, node.nom);
+            document.getElementById('detailName').textContent = `${node.prenom || '?'} ${node.nom || '?'}`;
+            document.getElementById('detailCode').textContent = node.codeMembre || '---';
+            document.getElementById('detailGen').textContent = `Génération ${currentGenMap[id] || 1}`;
+
+            const statusEl = document.getElementById('detailStatus');
+            statusEl.textContent = node.statut === 'actif' ? 'Actif' : 'Suspendu';
+            statusEl.className = `status-badge ${node.statut === 'actif' ? 'status-active' : 'status-suspended'}`;
+
+            document.getElementById('fieldTelephone').textContent = node.telephone || '---';
+            document.getElementById('fieldEmail').textContent = node.email || '---';
+            document.getElementById('fieldParrain').textContent = node.codeParrain || '-';
+            document.getElementById('fieldPosition').textContent = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : 'Racine';
+
+            cancelEditMode();
+
+            // re-render tree to highlight selection
+            renderTreeOnly();
+        }
+
+        function closeMemberDetails() {
+            selectedMemberId = null;
+            document.getElementById('detailsView').classList.add('hidden');
+            document.getElementById('detailsEmpty').classList.remove('hidden');
+            renderTreeOnly();
+        }
+
+        function renderTreeOnly() {
+            let rootId = null;
+            for (const [id, data] of Object.entries(usersMap)) {
+                if (!data.position) { rootId = id; break; }
+            }
+            currentGenMap = {};
+            const container = document.getElementById('treeContent');
+            if (rootId && usersMap[rootId]) {
+                container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
+            }
+        }
+
+        function enableEditMode() {
+            const node = usersMap[selectedMemberId];
+            if (!node) return;
+
+            document.getElementById('editPrenom').value = node.prenom || '';
+            document.getElementById('editNom').value = node.nom || '';
+            document.getElementById('editTelephone').value = node.telephone || '';
+            document.getElementById('editEmail').value = node.email || '';
+            document.getElementById('editStatut').value = node.statut || 'actif';
+
+            document.getElementById('detailFields').classList.add('hidden');
+            document.getElementById('detailEditForm').classList.remove('hidden');
+            document.getElementById('detailEditForm').classList.add('flex', 'flex-col');
+
+            document.getElementById('detailActionsView').classList.add('hidden');
+            document.getElementById('detailActionsView').classList.remove('flex');
+            document.getElementById('detailActionsEdit').classList.remove('hidden');
+            document.getElementById('detailActionsEdit').classList.add('flex');
+            document.getElementById('detailEditError').classList.add('hidden');
+        }
+
+        function cancelEditMode() {
+            document.getElementById('detailFields').classList.remove('hidden');
+            document.getElementById('detailEditForm').classList.add('hidden');
+            document.getElementById('detailEditForm').classList.remove('flex', 'flex-col');
+
+            document.getElementById('detailActionsView').classList.remove('hidden');
+            document.getElementById('detailActionsView').classList.add('flex');
+            document.getElementById('detailActionsEdit').classList.add('hidden');
+            document.getElementById('detailActionsEdit').classList.remove('flex');
+            document.getElementById('detailEditError').classList.add('hidden');
+        }
+
+        async function saveMemberEdit() {
+            if (!selectedMemberId) return;
+            const errorDiv = document.getElementById('detailEditError');
+            errorDiv.classList.add('hidden');
+
+            const prenom = document.getElementById('editPrenom').value.trim();
+            const nom = document.getElementById('editNom').value.trim();
+            const telephone = document.getElementById('editTelephone').value.trim();
+            const email = document.getElementById('editEmail').value.trim();
+            const statut = document.getElementById('editStatut').value;
+
+            if (!prenom || !nom || !telephone || !email) {
+                errorDiv.textContent = 'Tous les champs sont obligatoires';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                if (email !== usersMap[selectedMemberId].email) {
+                    const emailCheck = await db.collection('users')
+                        .where('email', '==', email)
+                        .limit(1)
+                        .get();
+                    if (!emailCheck.empty) {
+                        errorDiv.textContent = 'Cet email est déjà utilisé par un autre membre';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+                }
+
+                await db.collection('users').doc(selectedMemberId).update({
+                    prenom, nom, telephone, email, statut
+                });
+
+                showToast('✅ Membre mis à jour', 'success');
+                await loadAdminData();
+                showMemberDetails(selectedMemberId);
+            } catch (error) {
+                errorDiv.textContent = '❌ ' + error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        async function deleteMember() {
+            if (!selectedMemberId) return;
+            const node = usersMap[selectedMemberId];
+            if (!node) return;
+
+            if (node.leftChildId || node.rightChildId) {
+                showToast('⚠️ Retirez d\'abord ses filleuls avant de supprimer ce membre', 'warning');
+                return;
+            }
+
+            const confirmDelete = window.confirm(`Supprimer définitivement ${node.prenom} ${node.nom} (${node.codeMembre}) ?`);
+            if (!confirmDelete) return;
+
+            try {
+                if (node.parentId) {
+                    const updateData = {};
+                    updateData[node.position === 'left' ? 'leftChildId' : 'rightChildId'] = null;
+                    await db.collection('users').doc(node.parentId).update(updateData);
+                }
+
+                await db.collection('users').doc(selectedMemberId).delete();
+
+                showToast('🗑️ Membre supprimé', 'success');
+                closeMemberDetails();
+                await loadAdminData();
+            } catch (error) {
+                showToast('Erreur lors de la suppression', 'error');
+            }
+        }
+
+        // ============================================
         // LOAD TREE
         // ============================================
 
-        function buildTreeWithAddButtons(nodeId, isRoot = false) {
+        function buildTreeWithAddButtons(nodeId, isRoot = false, generation = 1) {
             const node = usersMap[nodeId];
             if (!node) return null;
 
+            currentGenMap[nodeId] = generation;
+
             let nodeClass = 'tree-node-content';
             if (isRoot) nodeClass += ' root';
+            if (selectedMemberId === nodeId) nodeClass += ' selected';
 
             const positionLabel = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : '';
             const initials = getInitials(node.prenom, node.nom);
 
             let html = `
                 <div class="tree-node">
-                    <div class="${nodeClass}">
+                    <div class="${nodeClass}" onclick="showMemberDetails('${nodeId}')">
+                        <span class="gen-tag">Gén. ${generation}</span>
                         <div class="node-avatar">${initials}</div>
                         <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
                         <div class="node-code">${node.codeMembre || '---'}</div>
@@ -943,7 +1237,7 @@
             html += `<div class="tree-children">`;
 
             if (hasLeft) {
-                html += `<div class="tree-child">${buildTreeWithAddButtons(node.leftChildId)}</div>`;
+                html += `<div class="tree-child">${buildTreeWithAddButtons(node.leftChildId, false, generation + 1)}</div>`;
             } else {
                 html += `
                     <div class="tree-child">
@@ -958,7 +1252,7 @@
             }
 
             if (hasRight) {
-                html += `<div class="tree-child">${buildTreeWithAddButtons(node.rightChildId)}</div>`;
+                html += `<div class="tree-child">${buildTreeWithAddButtons(node.rightChildId, false, generation + 1)}</div>`;
             } else {
                 html += `
                     <div class="tree-child">
@@ -990,9 +1284,10 @@
                     if (!data.position) { rootId = id; break; }
                 }
 
+                currentGenMap = {};
                 const container = document.getElementById('treeContent');
                 if (rootId && usersMap[rootId]) {
-                    container.innerHTML = buildTreeWithAddButtons(rootId, true);
+                    container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
                 } else {
                     container.innerHTML = `
                         <div class="text-slate-400 text-center py-6">
