@@ -51,7 +51,8 @@
             align-items: flex-start;
             min-width: 100%;
             min-height: 100%;
-            transition: transform 0.3s;
+            transition: transform 0.3s ease;
+            transform-origin: center top;
         }
         .tree-node {
             display: flex;
@@ -140,6 +141,54 @@
         .free-slot .add-btn i { font-size: 24px; }
         .free-slot .add-btn span { font-size: 10px; }
         
+        /* Boutons de zoom */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: white;
+            padding: 4px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
+        }
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .zoom-btn:hover {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+        .zoom-btn:active {
+            transform: scale(0.92);
+        }
+        .zoom-btn.primary {
+            background: #4f46e5;
+            color: white;
+        }
+        .zoom-btn.primary:hover {
+            background: #4338ca;
+        }
+        .zoom-level {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            min-width: 40px;
+            text-align: center;
+            user-select: none;
+        }
+        
         @media (max-width: 768px) {
             .tree-children { gap: 20px; flex-wrap: wrap; }
             .tree-node-content { min-width: 80px; padding: 8px 12px; }
@@ -147,6 +196,8 @@
             .tree-node-content .node-code { font-size: 10px; }
             .free-slot { min-width: 80px; min-height: 50px; }
             .free-slot .add-btn i { font-size: 18px; }
+            .zoom-btn { width: 28px; height: 28px; font-size: 12px; }
+            .zoom-level { font-size: 10px; min-width: 32px; }
         }
     </style>
 </head>
@@ -223,15 +274,30 @@
                 </div>
             </div>
 
-            <!-- Arbre -->
+            <!-- Arbre avec Zoom -->
             <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
                     <h2 class="text-xl font-bold text-gray-800">
                         <i class="fas fa-sitemap text-blue-600 mr-2"></i> Arbre - Cliquez sur <span class="text-green-600">+</span> pour ajouter
                     </h2>
-                    <button id="refreshTree" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
-                        <i class="fas fa-sync-alt mr-1"></i> Rafraîchir
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <!-- Contrôles de zoom -->
+                        <div class="zoom-controls">
+                            <button id="zoomOutBtn" class="zoom-btn" title="Dézoomer">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <span class="zoom-level" id="zoomLevel">100%</span>
+                            <button id="zoomInBtn" class="zoom-btn" title="Zoomer">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button id="resetZoomBtn" class="zoom-btn primary" title="Réinitialiser">
+                                <i class="fas fa-home"></i>
+                            </button>
+                        </div>
+                        <button id="refreshTree" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                            <i class="fas fa-sync-alt mr-1"></i> Rafraîchir
+                        </button>
+                    </div>
                 </div>
                 <div class="tree-container" id="treeContainer">
                     <div class="tree-wrapper" id="treeWrapper">
@@ -242,6 +308,10 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                <!-- Indicateur de niveau de zoom -->
+                <div class="mt-2 text-xs text-gray-400 text-center">
+                    <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer ou la molette de la souris
                 </div>
             </div>
 
@@ -360,6 +430,57 @@
         }
 
         // ============================================
+        // ZOOM
+        // ============================================
+
+        let currentZoom = 1;
+        const MIN_ZOOM = 0.3;
+        const MAX_ZOOM = 2.5;
+        const ZOOM_STEP = 0.1;
+
+        function updateZoom() {
+            const wrapper = document.getElementById('treeWrapper');
+            wrapper.style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+        }
+
+        function zoomIn() {
+            if (currentZoom < MAX_ZOOM) {
+                currentZoom = Math.min(currentZoom + ZOOM_STEP, MAX_ZOOM);
+                updateZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > MIN_ZOOM) {
+                currentZoom = Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM);
+                updateZoom();
+            }
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            updateZoom();
+        }
+
+        // Écouteurs pour les boutons de zoom
+        document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
+        document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
+        document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
+
+        // Zoom avec la molette de la souris
+        document.getElementById('treeContainer').addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    zoomIn();
+                } else {
+                    zoomOut();
+                }
+            }
+        }, { passive: false });
+
+        // ============================================
         // ADMIN LOGIN
         // ============================================
 
@@ -409,7 +530,6 @@
                     allMembers.push({ id: doc.id, ...data });
                     usersMap[doc.id] = { id: doc.id, ...data };
                 });
-                // Appliquer le filtre de recherche après chargement
                 applySearchFilter();
                 document.getElementById('memberCount').textContent = `(${allMembers.length})`;
             } catch (error) {
@@ -439,7 +559,6 @@
             renderMembers(filtered);
         }
 
-        // Écouteur d'événement pour la recherche
         document.getElementById('searchMember').addEventListener('input', function() {
             currentSearchTerm = this.value;
             applySearchFilter();
@@ -495,7 +614,6 @@
                 document.getElementById('actifsMembres').textContent = actifs;
                 document.getElementById('suspendusMembres').textContent = suspendus;
 
-                // Calcul des niveaux
                 let niveaux = 0;
                 const rootId = await findRoot();
                 if (rootId) {
@@ -569,7 +687,6 @@
                 const data = usersMap[currentId];
                 if (!data) continue;
                 
-                // Vérifier gauche
                 if (!data.leftChildId) {
                     return { parentId: currentId, position: 'left' };
                 }
@@ -577,7 +694,6 @@
                     queue.push(data.leftChildId);
                 }
                 
-                // Vérifier droite
                 if (!data.rightChildId) {
                     return { parentId: currentId, position: 'right' };
                 }
@@ -618,7 +734,6 @@
         async function ajouterMembre(data) {
             const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
             
-            // Vérifier email unique
             const emailCheck = await db.collection('users')
                 .where('email', '==', email)
                 .limit(1)
@@ -628,10 +743,8 @@
                 throw new Error('Cet email est déjà utilisé');
             }
             
-            // Générer le code
             const codeMembre = await generateMemberCode();
             
-            // Déterminer la position
             let finalParentId = parentId;
             let finalPosition = position;
             
@@ -647,7 +760,6 @@
                 }
             }
             
-            // Récupérer le code du parrain
             let parrainCode = codeParrain;
             let parrainId = null;
             
@@ -659,7 +771,6 @@
                 }
             }
             
-            // Créer le membre
             const userData = {
                 codeMembre: codeMembre,
                 nom: nom,
@@ -678,14 +789,12 @@
             
             const docRef = await db.collection('users').add(userData);
             
-            // Mettre à jour le parent
             if (finalParentId) {
                 const updateData = {};
                 updateData[finalPosition === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
                 await db.collection('users').doc(finalParentId).update(updateData);
             }
             
-            // Mettre à jour usersMap
             usersMap[docRef.id] = { id: docRef.id, ...userData };
             
             return {
@@ -777,7 +886,6 @@
 
         async function loadTree() {
             try {
-                // Recharger usersMap depuis Firestore
                 const snapshot = await db.collection('users').get();
                 usersMap = {};
                 snapshot.forEach(doc => {
@@ -801,6 +909,9 @@
                         </div>
                     `;
                 }
+
+                // Réinitialiser le zoom
+                resetZoom();
 
             } catch (error) {
                 console.error('Erreur chargement arbre:', error);
