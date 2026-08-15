@@ -16,7 +16,7 @@
         .member-row:hover { background: #f8fafc; }
         .status-active { background: #dcfce7; color: #166534; }
         .status-suspended { background: #fee2e2; color: #991b1b; }
-        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; display: inline-block; }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -36,7 +36,6 @@
         .toast-error { background: #dc2626; }
         .toast-warning { background: #d97706; }
         
-        /* Styles pour l'arbre dans l'admin */
         .tree-container {
             overflow: auto;
             padding: 20px;
@@ -113,7 +112,6 @@
         .tree-child:last-child::before { right: 50%; }
         .tree-child:only-child::before { left: 50%; }
         
-        /* Position libre avec bouton + */
         .free-slot {
             display: flex;
             align-items: center;
@@ -138,15 +136,9 @@
             gap: 4px;
             color: #6b7280;
         }
-        .free-slot:hover .add-btn {
-            color: #2563eb;
-        }
-        .free-slot .add-btn i {
-            font-size: 24px;
-        }
-        .free-slot .add-btn span {
-            font-size: 10px;
-        }
+        .free-slot:hover .add-btn { color: #2563eb; }
+        .free-slot .add-btn i { font-size: 24px; }
+        .free-slot .add-btn span { font-size: 10px; }
         
         @media (max-width: 768px) {
             .tree-children { gap: 20px; flex-wrap: wrap; }
@@ -231,7 +223,7 @@
                 </div>
             </div>
 
-            <!-- Arbre avec ajout direct -->
+            <!-- Arbre -->
             <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold text-gray-800">
@@ -253,7 +245,7 @@
                 </div>
             </div>
 
-            <!-- Formulaire d'ajout rapide -->
+            <!-- Formulaire -->
             <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">
                     <i class="fas fa-user-plus text-blue-600 mr-2"></i> Ajouter un membre
@@ -270,7 +262,7 @@
                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <input type="email" id="email" placeholder="Email *" required 
                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <input type="text" id="codeParrain" placeholder="Code parrain (auto-rempli)" 
+                    <input type="text" id="codeParrain" placeholder="Code parrain (auto)" 
                            class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none" readonly>
                     <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                         <i class="fas fa-plus mr-2"></i> Ajouter
@@ -279,7 +271,7 @@
                 <div id="formMessage" class="mt-3 text-sm hidden"></div>
             </div>
 
-            <!-- Liste des membres -->
+            <!-- Liste -->
             <div class="bg-white rounded-2xl shadow-lg p-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold text-gray-800">
@@ -307,7 +299,7 @@
         </div>
     </main>
 
-    <!-- Modal d'ajout depuis une position libre -->
+    <!-- Modal -->
     <div id="addModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-overlay absolute inset-0" onclick="closeAddModal()"></div>
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl max-w-md w-full p-6">
@@ -392,7 +384,7 @@
         let usersMap = {};
 
         // ============================================
-        // CHARGEMENT
+        // LOAD ADMIN DATA
         // ============================================
 
         async function loadAdminData() {
@@ -401,13 +393,19 @@
             await loadTree();
         }
 
+        // ============================================
+        // LOAD MEMBERS
+        // ============================================
+
         async function loadMembers() {
             try {
                 const snapshot = await db.collection('users').get();
                 allMembers = [];
+                usersMap = {};
                 snapshot.forEach(doc => {
-                    allMembers.push({ id: doc.id, ...doc.data() });
-                    usersMap[doc.id] = { id: doc.id, ...doc.data() };
+                    const data = doc.data();
+                    allMembers.push({ id: doc.id, ...data });
+                    usersMap[doc.id] = { id: doc.id, ...data };
                 });
                 renderMembers(allMembers);
             } catch (error) {
@@ -443,7 +441,245 @@
         }
 
         // ============================================
-        // ARBRE AVEC BOUTONS +
+        // LOAD STATS
+        // ============================================
+
+        async function loadStats() {
+            try {
+                const snapshot = await db.collection('users').get();
+                let total = 0, actifs = 0, suspendus = 0;
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    total++;
+                    if (data.statut === 'actif') actifs++;
+                    if (data.statut === 'suspendu') suspendus++;
+                });
+
+                document.getElementById('totalMembres').textContent = total;
+                document.getElementById('actifsMembres').textContent = actifs;
+                document.getElementById('suspendusMembres').textContent = suspendus;
+
+                // Calcul des niveaux
+                let niveaux = 0;
+                const rootId = await findRoot();
+                if (rootId) {
+                    const queue = [{ id: rootId, level: 0 }];
+                    const visited = new Set();
+                    while (queue.length > 0) {
+                        const { id, level } = queue.shift();
+                        if (visited.has(id)) continue;
+                        visited.add(id);
+                        if (level > niveaux) niveaux = level;
+                        
+                        const data = usersMap[id];
+                        if (data) {
+                            if (data.leftChildId) queue.push({ id: data.leftChildId, level: level + 1 });
+                            if (data.rightChildId) queue.push({ id: data.rightChildId, level: level + 1 });
+                        }
+                    }
+                }
+                document.getElementById('niveauxArbre').textContent = niveaux + 1;
+
+            } catch (error) {
+                console.error('Erreur stats:', error);
+            }
+        }
+
+        // ============================================
+        // FIND ROOT
+        // ============================================
+
+        async function findRoot() {
+            try {
+                const query = await db.collection('users')
+                    .where('position', '==', null)
+                    .limit(1)
+                    .get();
+                
+                if (!query.empty) {
+                    return query.docs[0].id;
+                }
+                
+                const first = await db.collection('users')
+                    .orderBy('dateInscription')
+                    .limit(1)
+                    .get();
+                
+                return first.empty ? null : first.docs[0].id;
+            } catch (error) {
+                console.error('Erreur findRoot:', error);
+                return null;
+            }
+        }
+
+        // ============================================
+        // FIND NEXT AVAILABLE POSITION (BFS)
+        // ============================================
+
+        async function findNextAvailablePosition(rootId) {
+            if (!rootId) {
+                return { parentId: null, position: null };
+            }
+            
+            const queue = [rootId];
+            const visited = new Set();
+            
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+                
+                const data = usersMap[currentId];
+                if (!data) continue;
+                
+                // Vérifier gauche
+                if (!data.leftChildId) {
+                    return { parentId: currentId, position: 'left' };
+                }
+                if (data.leftChildId && !visited.has(data.leftChildId)) {
+                    queue.push(data.leftChildId);
+                }
+                
+                // Vérifier droite
+                if (!data.rightChildId) {
+                    return { parentId: currentId, position: 'right' };
+                }
+                if (data.rightChildId && !visited.has(data.rightChildId)) {
+                    queue.push(data.rightChildId);
+                }
+            }
+            
+            return { parentId: rootId, position: 'left' };
+        }
+
+        // ============================================
+        // GENERATE MEMBER CODE
+        // ============================================
+
+        async function generateMemberCode() {
+            const counterRef = db.collection('counters').doc('memberCode');
+            try {
+                const result = await db.runTransaction(async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    let currentNumber = counterDoc.exists ? counterDoc.data().currentNumber : 0;
+                    currentNumber++;
+                    transaction.set(counterRef, { currentNumber });
+                    return currentNumber;
+                });
+                return `MB${String(result).padStart(6, '0')}`;
+            } catch (error) {
+                console.error('Erreur génération code:', error);
+                const random = Math.floor(Math.random() * 1000000);
+                return `MB${String(random).padStart(6, '0')}`;
+            }
+        }
+
+        // ============================================
+        // AJOUTER MEMBRE
+        // ============================================
+
+        async function ajouterMembre(data) {
+            const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
+            
+            // Vérifier email unique
+            const emailCheck = await db.collection('users')
+                .where('email', '==', email)
+                .limit(1)
+                .get();
+            
+            if (!emailCheck.empty) {
+                throw new Error('Cet email est déjà utilisé');
+            }
+            
+            // Générer le code
+            const codeMembre = await generateMemberCode();
+            
+            // Déterminer la position
+            let finalParentId = parentId;
+            let finalPosition = position;
+            
+            if (!finalParentId) {
+                const rootId = await findRoot();
+                if (!rootId) {
+                    finalParentId = null;
+                    finalPosition = null;
+                } else {
+                    const pos = await findNextAvailablePosition(rootId);
+                    finalParentId = pos.parentId;
+                    finalPosition = pos.position;
+                }
+            }
+            
+            // Récupérer le code du parrain
+            let parrainCode = codeParrain;
+            let parrainId = null;
+            
+            if (finalParentId) {
+                const parentData = usersMap[finalParentId];
+                if (parentData) {
+                    parrainCode = parentData.codeMembre;
+                    parrainId = finalParentId;
+                }
+            }
+            
+            // Créer le membre
+            const userData = {
+                codeMembre: codeMembre,
+                nom: nom,
+                prenom: prenom,
+                telephone: telephone,
+                email: email,
+                codeParrain: parrainCode,
+                parrainId: parrainId,
+                parentId: finalParentId,
+                position: finalPosition,
+                leftChildId: null,
+                rightChildId: null,
+                dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                statut: 'actif'
+            };
+            
+            const docRef = await db.collection('users').add(userData);
+            
+            // Mettre à jour le parent
+            if (finalParentId) {
+                const updateData = {};
+                updateData[finalPosition === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
+                await db.collection('users').doc(finalParentId).update(updateData);
+            }
+            
+            // Mettre à jour usersMap
+            usersMap[docRef.id] = { id: docRef.id, ...userData };
+            
+            return {
+                success: true,
+                id: docRef.id,
+                codeMembre: codeMembre
+            };
+        }
+
+        // ============================================
+        // TOGGLE STATUS
+        // ============================================
+
+        async function toggleStatus(id) {
+            try {
+                const doc = await db.collection('users').doc(id).get();
+                if (!doc.exists) return;
+                const current = doc.data().statut;
+                const newStatus = current === 'actif' ? 'suspendu' : 'actif';
+                await db.collection('users').doc(id).update({ statut: newStatus });
+                await loadAdminData();
+                showToast('Statut mis à jour', 'success');
+            } catch (error) {
+                showToast('Erreur', 'error');
+            }
+        }
+
+        // ============================================
+        // LOAD TREE
         // ============================================
 
         function buildTreeWithAddButtons(nodeId, isRoot = false) {
@@ -469,7 +705,6 @@
 
             html += `<div class="tree-children">`;
             
-            // Côté gauche
             if (hasLeft) {
                 html += `<div class="tree-child">${buildTreeWithAddButtons(node.leftChildId)}</div>`;
             } else {
@@ -485,7 +720,6 @@
                 `;
             }
             
-            // Côté droit
             if (hasRight) {
                 html += `<div class="tree-child">${buildTreeWithAddButtons(node.rightChildId)}</div>`;
             } else {
@@ -508,6 +742,7 @@
 
         async function loadTree() {
             try {
+                // Recharger usersMap depuis Firestore
                 const snapshot = await db.collection('users').get();
                 usersMap = {};
                 snapshot.forEach(doc => {
@@ -543,7 +778,7 @@
         });
 
         // ============================================
-        // MODAL D'AJOUT DEPUIS L'ARBRE
+        // MODAL AJOUT
         // ============================================
 
         function openAddModal(parentId, position, parentCode, parentName) {
@@ -566,7 +801,7 @@
         });
 
         // ============================================
-        // AJOUT DEPUIS LE MODAL
+        // MODAL AJOUT SUBMIT
         // ============================================
 
         document.getElementById('modalAddForm').addEventListener('submit', async function(e) {
@@ -590,57 +825,24 @@
                 return;
             }
 
-            // Vérifier email unique
-            const emailCheck = await db.collection('users').where('email', '==', email).limit(1).get();
-            if (!emailCheck.empty) {
-                errorDiv.textContent = '❌ Cet email est déjà utilisé';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
             loading.classList.remove('hidden');
             btnText.textContent = 'Ajout en cours...';
             submitBtn.disabled = true;
             errorDiv.classList.add('hidden');
 
             try {
-                // Récupérer le parent
-                const parentDoc = await db.collection('users').doc(parentId).get();
-                if (!parentDoc.exists) throw new Error('Parent non trouvé');
-                const parentData = parentDoc.data();
-
-                // Générer le code
-                const codeMembre = await generateMemberCode();
-
-                // Créer le membre
-                const userData = {
-                    codeMembre: codeMembre,
-                    nom: nom,
-                    prenom: prenom,
-                    telephone: telephone,
-                    email: email,
-                    codeParrain: parentData.codeMembre,
-                    parrainId: parentId,
+                const result = await ajouterMembre({
+                    nom, prenom, telephone, email,
                     parentId: parentId,
                     position: position,
-                    leftChildId: null,
-                    rightChildId: null,
-                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
-                    statut: 'actif'
-                };
+                    codeParrain: null
+                });
 
-                const docRef = await db.collection('users').add(userData);
-
-                // Mettre à jour le parent
-                const updateData = {};
-                updateData[position === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
-                await db.collection('users').doc(parentId).update(updateData);
-
-                showToast(`✅ ${prenom} ${nom} ajouté ! Code: ${codeMembre}`, 'success');
-                
-                closeAddModal();
-                await loadAdminData();
-
+                if (result.success) {
+                    showToast(`✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`, 'success');
+                    closeAddModal();
+                    await loadAdminData();
+                }
             } catch (error) {
                 console.error('Erreur:', error);
                 errorDiv.textContent = '❌ ' + error.message;
@@ -653,201 +855,64 @@
         });
 
         // ============================================
-        // FONCTIONS UTILITAIRES
+        // FORMULAIRE PRINCIPAL
         // ============================================
 
-        
-        
+        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const nom = document.getElementById('nom').value.trim();
+            const prenom = document.getElementById('prenom').value.trim();
+            const telephone = document.getElementById('telephone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const parentId = document.getElementById('parentIdField').value || null;
+            const position = document.getElementById('positionField').value || null;
 
+            const message = document.getElementById('formMessage');
 
+            if (!nom || !prenom || !telephone || !email) {
+                message.className = 'mt-3 text-sm text-red-600';
+                message.textContent = 'Tous les champs sont obligatoires';
+                message.classList.remove('hidden');
+                return;
+            }
 
-// ============================================
-// FONCTIONS DE PLACEMENT CORRIGÉES
-// ============================================
+            try {
+                const result = await ajouterMembre({
+                    nom, prenom, telephone, email,
+                    parentId: parentId,
+                    position: position,
+                    codeParrain: null
+                });
 
-async function generateMemberCode() {
-    const counterRef = db.collection('counters').doc('memberCode');
-    try {
-        const result = await db.runTransaction(async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            let currentNumber = counterDoc.exists ? counterDoc.data().currentNumber : 0;
-            currentNumber++;
-            transaction.set(counterRef, { currentNumber });
-            return currentNumber;
+                if (result.success) {
+                    message.className = 'mt-3 text-sm text-green-600';
+                    message.textContent = `✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`;
+                    message.classList.remove('hidden');
+                    document.getElementById('addMemberForm').reset();
+                    await loadAdminData();
+                }
+            } catch (error) {
+                message.className = 'mt-3 text-sm text-red-600';
+                message.textContent = '❌ ' + error.message;
+                message.classList.remove('hidden');
+            }
         });
-        return `MB${String(result).padStart(6, '0')}`;
-    } catch (error) {
-        console.error('Erreur génération code:', error);
-        const random = Math.floor(Math.random() * 1000000);
-        return `MB${String(random).padStart(6, '0')}`;
-    }
-}
 
-// Trouver la racine (premier membre sans position)
-async function findRoot() {
-    try {
-        const query = await db.collection('users')
-            .where('position', '==', null)
-            .limit(1)
-            .get();
-        
-        if (!query.empty) {
-            return query.docs[0].id;
-        }
-        
-        // Si pas de racine, prendre le premier membre
-        const first = await db.collection('users')
-            .orderBy('dateInscription')
-            .limit(1)
-            .get();
-        
-        return first.empty ? null : first.docs[0].id;
-    } catch (error) {
-        console.error('Erreur findRoot:', error);
-        return null;
-    }
-}
+        // ============================================
+        // RECHERCHE
+        // ============================================
 
-// BFS corrigé - trouve la première position libre
-async function findNextAvailablePosition(rootId) {
-    if (!rootId) {
-        return { parentId: null, position: null };
-    }
-    
-    const queue = [rootId];
-    const visited = new Set();
-    
-    console.log('🔍 Recherche BFS depuis la racine:', rootId);
-    
-    while (queue.length > 0) {
-        const currentId = queue.shift();
-        
-        if (visited.has(currentId)) continue;
-        visited.add(currentId);
-        
-        try {
-            const doc = await db.collection('users').doc(currentId).get();
-            if (!doc.exists) continue;
-            
-            const data = doc.data();
-            console.log(`📌 Noeud ${data.codeMembre}: gauche=${data.leftChildId}, droite=${data.rightChildId}`);
-            
-            // 🔴 Vérifier d'abord la gauche
-            if (!data.leftChildId) {
-                console.log(`✅ Position libre trouvée: gauche de ${data.codeMembre}`);
-                return { parentId: currentId, position: 'left' };
-            }
-            if (data.leftChildId && !visited.has(data.leftChildId)) {
-                queue.push(data.leftChildId);
-            }
-            
-            // 🔴 Vérifier ensuite la droite
-            if (!data.rightChildId) {
-                console.log(`✅ Position libre trouvée: droite de ${data.codeMembre}`);
-                return { parentId: currentId, position: 'right' };
-            }
-            if (data.rightChildId && !visited.has(data.rightChildId)) {
-                queue.push(data.rightChildId);
-            }
-            
-        } catch (error) {
-            console.error('Erreur BFS:', error);
-        }
-    }
-    
-    // Si l'arbre est plein, ajouter à gauche de la racine
-    console.log('⚠️ Arbre plein, ajout à gauche de la racine');
-    return { parentId: rootId, position: 'left' };
-}
-
-// ============================================
-// AJOUT D'UN MEMBRE (CORRIGÉ)
-// ============================================
-
-async function ajouterMembre(data) {
-    const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
-    
-    // 1. Vérifier si l'email existe déjà
-    const emailCheck = await db.collection('users')
-        .where('email', '==', email)
-        .limit(1)
-        .get();
-    
-    if (!emailCheck.empty) {
-        throw new Error('Cet email est déjà utilisé');
-    }
-    
-    // 2. Générer le code membre
-    const codeMembre = await generateMemberCode();
-    
-    // 3. Si parentId est fourni, on l'utilise directement
-    // Sinon, on cherche la première position libre
-    let finalParentId = parentId;
-    let finalPosition = position;
-    
-    if (!finalParentId) {
-        const rootId = await findRoot();
-        if (!rootId) {
-            // Premier membre → racine
-            finalParentId = null;
-            finalPosition = null;
-        } else {
-            const pos = await findNextAvailablePosition(rootId);
-            finalParentId = pos.parentId;
-            finalPosition = pos.position;
-        }
-    }
-    
-    // 4. Récupérer le code du parrain
-    let parrainCode = codeParrain;
-    let parrainId = null;
-    
-    if (finalParentId) {
-        const parentDoc = await db.collection('users').doc(finalParentId).get();
-        if (parentDoc.exists) {
-            parrainCode = parentDoc.data().codeMembre;
-            parrainId = finalParentId;
-        }
-    }
-    
-    // 5. Créer le membre
-    const userData = {
-        codeMembre: codeMembre,
-        nom: nom,
-        prenom: prenom,
-        telephone: telephone,
-        email: email,
-        codeParrain: parrainCode,
-        parrainId: parrainId,
-        parentId: finalParentId,
-        position: finalPosition,
-        leftChildId: null,
-        rightChildId: null,
-        dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
-        statut: 'actif'
-    };
-    
-    console.log('📝 Ajout du membre:', userData);
-    
-    // 6. Sauvegarder
-    const docRef = await db.collection('users').add(userData);
-    
-    // 7. Mettre à jour le parent
-    if (finalParentId) {
-        const updateData = {};
-        updateData[finalPosition === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
-        await db.collection('users').doc(finalParentId).update(updateData);
-        console.log(`✅ Parent ${finalParentId} mis à jour: ${finalPosition} = ${docRef.id}`);
-    }
-    
-    return {
-        success: true,
-        id: docRef.id,
-        codeMembre: codeMembre,
-        message: 'Membre ajouté avec succès'
-    };
-}
-
+        document.getElementById('searchMember').addEventListener('input', function() {
+            const search = this.value.toLowerCase();
+            const filtered = allMembers.filter(m => 
+                m.codeMembre?.toLowerCase().includes(search) ||
+                m.nom?.toLowerCase().includes(search) ||
+                m.prenom?.toLowerCase().includes(search) ||
+                m.email?.toLowerCase().includes(search)
+            );
+            renderMembers(filtered);
+        });
     </script>
 </body>
 </html>
