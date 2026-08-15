@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - CommunityTree</title>
+    <title>Ma Généalogie - CommunityTree</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
@@ -11,442 +11,45 @@
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* ============================================
-           VARIABLES ET STYLES GLOBAUX
-           ============================================ */
-        :root {
-            --primary: #4f46e5;
-            --primary-light: #818cf8;
-            --primary-dark: #3730a3;
-            --secondary: #06b6d4;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
-            --radius: 16px;
-            --shadow: 0 4px 24px rgba(0,0,0,0.08);
-            --shadow-hover: 0 8px 40px rgba(0,0,0,0.14);
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .member-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .member-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .tree-line { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            position: relative;
         }
-
-        body {
-            background: var(--gray-50);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        .tree-line::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 30px;
+            background: #9CA3AF;
         }
-
-        .gradient-bg {
-            background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
-        }
-        .gradient-bg-light {
-            background: linear-gradient(135deg, #eef2ff 0%, #f0f0ff 100%);
-        }
-
-        /* ============================================
-           TOAST
-           ============================================ */
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-suspended { background: #fee2e2; color: #991b1b; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .search-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .toast {
             position: fixed;
-            bottom: 24px;
-            right: 24px;
+            bottom: 20px;
+            right: 20px;
             padding: 16px 24px;
             border-radius: 12px;
             color: white;
             font-weight: 500;
-            z-index: 9999;
+            z-index: 999;
             transform: translateY(100px);
             opacity: 0;
-            transition: all 0.4s ease;
-            max-width: 420px;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+            transition: all 0.5s ease;
+            max-width: 400px;
         }
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .toast-success { background: var(--success); }
-        .toast-error { background: var(--danger); }
-        .toast-warning { background: var(--warning); }
-        .toast-info { background: var(--primary); }
-
-        /* ============================================
-           ARBRE
-           ============================================ */
-        .tree-container {
-            overflow: auto;
-            padding: 32px 24px;
-            min-height: 480px;
-            background: white;
-            border-radius: var(--radius);
-            border: 1px solid var(--gray-200);
-            box-shadow: var(--shadow);
-            -webkit-overflow-scrolling: touch;
-        }
-        .tree-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-width: max-content;
-            min-height: 100%;
-            transition: transform 0.3s ease;
-            transform-origin: top center;
-            padding: 20px 0;
-        }
-
-        /* Nœud de l'arbre */
-        .tree-node {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-        }
-
-        /* Contenu du nœud */
-        .tree-node-content {
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-radius: 14px;
-            padding: 12px 20px;
-            min-width: 130px;
-            max-width: 180px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            transition: var(--transition);
-            position: relative;
-            z-index: 2;
-            cursor: default;
-        }
-        .tree-node-content:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
-            border-color: var(--primary-light);
-        }
-        .tree-node-content.root {
-            border-color: var(--primary);
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
-        }
-        .tree-node-content.root .node-code { color: rgba(255,255,255,0.75); }
-        .tree-node-content .node-name {
-            font-weight: 600;
-            font-size: 14px;
-            line-height: 1.3;
-            color: var(--gray-800);
-        }
-        .tree-node-content.root .node-name { color: white; }
-        .tree-node-content .node-code {
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--gray-500);
-            letter-spacing: 0.3px;
-        }
-        .tree-node-content .node-level {
-            font-size: 10px;
-            font-weight: 600;
-            color: var(--gray-400);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 2px;
-        }
-        .tree-node-content.root .node-level { color: rgba(255,255,255,0.6); }
-
-        /* Lignes de connexion */
-        .tree-connector {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
-        .tree-connector svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: visible;
-        }
-        .tree-connector path {
-            fill: none;
-            stroke: var(--gray-300);
-            stroke-width: 2.5;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-
-        /* Enfants */
-        .tree-children {
-            display: flex;
-            justify-content: center;
-            gap: 48px;
-            margin-top: 28px;
-            position: relative;
-            padding-top: 20px;
-        }
-        /* Ligne verticale depuis le parent vers les enfants */
-        .tree-children::before {
-            content: '';
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            width: 2.5px;
-            height: 28px;
-            background: var(--gray-300);
-            border-radius: 2px;
-        }
-        .tree-child {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            flex: 1;
-            max-width: 300px;
-            min-width: 100px;
-        }
-        /* Ligne horizontale entre les enfants (si plus d'un) */
-        .tree-child::before {
-            content: '';
-            position: absolute;
-            top: -8px;
-            height: 2.5px;
-            background: var(--gray-300);
-            border-radius: 2px;
-        }
-        .tree-child:first-child::before {
-            right: 50%;
-            left: 0;
-        }
-        .tree-child:last-child::before {
-            left: 50%;
-            right: 0;
-        }
-        .tree-child:only-child::before {
-            display: none;
-        }
-        /* Ligne verticale de chaque enfant vers son nœud */
-        .tree-child .tree-node::before {
-            content: '';
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            width: 2.5px;
-            height: 20px;
-            background: var(--gray-300);
-            border-radius: 2px;
-            z-index: 1;
-        }
-
-        /* Position libre (bouton +) */
-        .free-slot {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 130px;
-            min-height: 68px;
-            border: 2px dashed var(--gray-300);
-            border-radius: 14px;
-            background: var(--gray-50);
-            cursor: pointer;
-            transition: var(--transition);
-            position: relative;
-            z-index: 2;
-            padding: 8px;
-        }
-        .free-slot:hover {
-            background: #eef2ff;
-            border-color: var(--primary);
-            transform: scale(1.04);
-            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.15);
-        }
-        .free-slot .add-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            color: var(--gray-400);
-            transition: var(--transition);
-        }
-        .free-slot:hover .add-btn {
-            color: var(--primary);
-        }
-        .free-slot .add-btn i {
-            font-size: 28px;
-            transition: var(--transition);
-        }
-        .free-slot:hover .add-btn i {
-            transform: scale(1.1);
-        }
-        .free-slot .add-btn span {
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        /* ============================================
-           LISTE DES MEMBRES
-           ============================================ */
-        .member-row {
-            transition: var(--transition);
-            border-radius: 10px;
-            cursor: default;
-        }
-        .member-row:hover {
-            background: var(--gray-50);
-            transform: scale(1.01);
-        }
-        .member-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-            color: white;
-            flex-shrink: 0;
-        }
-        .member-avatar.active {
-            background: var(--primary);
-        }
-        .member-avatar.suspended {
-            background: var(--danger);
-        }
-
-        /* ============================================
-           RESPONSIVE : L'arbre reste en mode desktop
-           ============================================ */
-        @media (max-width: 768px) {
-            .tree-container {
-                padding: 16px 12px;
-                min-height: 400px;
-                border-radius: 12px;
-            }
-            .tree-wrapper {
-                padding: 12px 0;
-                justify-content: flex-start;
-                min-width: 800px; /* Permet le scroll horizontal */
-            }
-            .tree-children {
-                gap: 24px;
-                padding-top: 16px;
-            }
-            .tree-child {
-                min-width: 80px;
-            }
-            .tree-node-content {
-                min-width: 90px;
-                padding: 10px 14px;
-            }
-            .tree-node-content .node-name { font-size: 13px; }
-            .tree-node-content .node-code { font-size: 10px; }
-            .free-slot {
-                min-width: 90px;
-                min-height: 56px;
-            }
-            .free-slot .add-btn i { font-size: 22px; }
-            .free-slot .add-btn span { font-size: 10px; }
-
-            /* Ajustement de la liste */
-            .member-row td {
-                padding: 8px 4px;
-            }
-            .member-avatar {
-                width: 28px;
-                height: 28px;
-                font-size: 11px;
-            }
-        }
-
-        /* ============================================
-           MODAL
-           ============================================ */
-        .modal-overlay {
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(6px);
-        }
-        .modal-content {
-            animation: modalIn 0.3s ease;
-        }
-        @keyframes modalIn {
-            from { opacity: 0; transform: translateY(20px) scale(0.96); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        /* ============================================
-           STATS CARDS
-           ============================================ */
-        .stat-card {
-            transition: var(--transition);
-            border: 1px solid var(--gray-200);
-            background: white;
-            border-radius: var(--radius);
-            padding: 16px 20px;
-        }
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-hover);
-            border-color: var(--primary-light);
-        }
-        .stat-card .stat-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        .stat-card .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--gray-900);
-            line-height: 1.2;
-        }
-
-        /* ============================================
-           FORMULAIRES
-           ============================================ */
-        input, select, textarea {
-            transition: var(--transition);
-            border-color: var(--gray-300);
-        }
-        input:focus, select:focus, textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-            outline: none;
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: var(--transition);
-            cursor: pointer;
-        }
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
-        }
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-error { background: #dc2626; }
+        .toast-info { background: #2563eb; }
     </style>
 </head>
 <body>
@@ -465,824 +68,356 @@
         db.settings({ timestampsInSnapshots: true });
     </script>
 
-    <!-- Toast -->
+    <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
 
     <!-- Header -->
-    <header class="bg-white/80 backdrop-blur-sm shadow-sm fixed top-0 left-0 right-0 z-30 border-b border-gray-100">
-        <div class="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-tree text-primary text-2xl"></i>
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
+        <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
+            <div class="flex items-center">
+                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
                 <span class="text-xl font-bold text-gray-800">CommunityTree</span>
-                <span class="ml-2 text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-semibold">Admin</span>
             </div>
-            <a href="index.html" class="text-gray-500 hover:text-gray-700 transition flex items-center gap-1 text-sm">
+            <a href="index.html" class="text-gray-500 hover:text-gray-700">
                 <i class="fas fa-home"></i> Accueil
             </a>
         </div>
     </header>
 
-    <main class="pt-20 px-4 pb-8 max-w-7xl mx-auto">
-        <!-- Login Admin -->
-        <div id="loginAdmin" class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+    <main class="pt-20 px-4 pb-8 max-w-4xl mx-auto">
+        <!-- Zone de recherche -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8">
             <div class="text-center mb-6">
-                <i class="fas fa-lock text-4xl text-primary mb-3"></i>
-                <h2 class="text-2xl font-bold text-gray-800">Accès Admin</h2>
-                <p class="text-gray-500 text-sm">Entrez le mot de passe pour continuer</p>
+                <i class="fas fa-sitemap text-4xl text-blue-600 mb-3"></i>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Ma Généalogie</h1>
+                <p class="text-gray-500 text-sm mt-1">Entrez votre code ou email pour voir votre arbre</p>
             </div>
-            <form id="adminLoginForm">
-                <input type="password" id="adminPassword" placeholder="Mot de passe" 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition mb-4">
-                <button type="submit" class="w-full py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition font-semibold">
-                    <i class="fas fa-unlock mr-2"></i> Accéder
+
+            <form id="searchForm" class="flex flex-col md:flex-row gap-3 max-w-2xl mx-auto">
+                <input type="text" id="searchInput" 
+                       placeholder="Code (MB000001) ou Email" 
+                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg search-input focus:outline-none">
+                <button type="submit" 
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
+                    <i class="fas fa-search mr-2"></i> Rechercher
                 </button>
-                <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden">Mot de passe incorrect</p>
             </form>
+
+            <div id="searchHint" class="text-center text-sm text-gray-400 mt-3">
+                <i class="fas fa-info-circle mr-1"></i>
+                Exemple: MB000001 ou jean@email.com
+            </div>
         </div>
 
-        <!-- Contenu Admin -->
-        <div id="adminContent" class="hidden">
-            <!-- Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="stat-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Total</p>
-                            <p class="stat-value" id="totalMembres">0</p>
-                        </div>
-                        <div class="stat-icon bg-blue-50 text-blue-600">
-                            <i class="fas fa-users"></i>
-                        </div>
+        <!-- Résultats -->
+        <div id="results" class="hidden">
+            <!-- Profil du membre -->
+            <div id="memberProfile" class="bg-white rounded-2xl shadow-lg p-6 mb-6 fade-in">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 rounded-full gradient-bg flex items-center justify-center text-white text-xl font-bold" id="memberInitial">J</div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800" id="memberName">Jean Dupont</h2>
+                        <p class="text-sm text-gray-500 font-mono" id="memberCode">MB000001</p>
                     </div>
+                    <span class="ml-auto status-badge" id="memberStatus">Actif</span>
                 </div>
-                <div class="stat-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Actifs</p>
-                            <p class="stat-value text-green-600" id="actifsMembres">0</p>
-                        </div>
-                        <div class="stat-icon bg-green-50 text-green-600">
-                            <i class="fas fa-user-check"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Suspendus</p>
-                            <p class="stat-value text-red-600" id="suspendusMembres">0</p>
-                        </div>
-                        <div class="stat-icon bg-red-50 text-red-600">
-                            <i class="fas fa-user-slash"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Niveaux</p>
-                            <p class="stat-value text-purple-600" id="niveauxArbre">0</p>
-                        </div>
-                        <div class="stat-icon bg-purple-50 text-purple-600">
-                            <i class="fas fa-layer-group"></i>
-                        </div>
-                    </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div><span class="text-gray-500">Email:</span> <span id="memberEmail" class="font-medium">---</span></div>
+                    <div><span class="text-gray-500">Téléphone:</span> <span id="memberPhone" class="font-medium">---</span></div>
+                    <div><span class="text-gray-500">Position:</span> <span id="memberPosition" class="font-medium">---</span></div>
                 </div>
             </div>
 
-            <!-- Arbre -->
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-sitemap text-primary"></i>
-                        Arbre
-                        <span class="text-sm font-normal text-gray-400">— Cliquez sur <span class="text-green-600 font-semibold">+</span> pour ajouter</span>
-                    </h2>
-                    <button id="refreshTree" class="btn-primary text-sm flex items-center gap-2">
-                        <i class="fas fa-sync-alt"></i> Rafraîchir
-                    </button>
-                </div>
-                <div class="tree-container" id="treeContainer">
-                    <div class="tree-wrapper" id="treeWrapper">
-                        <div id="treeContent" class="flex flex-col items-center">
-                            <div class="text-gray-400 text-center py-10">
-                                <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
-                                <p>Chargement de l'arbre...</p>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Ascendance (Parrain) -->
+            <div id="ascendance" class="bg-white rounded-2xl shadow-lg p-6 mb-6 fade-in">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">
+                    <i class="fas fa-arrow-up text-blue-600 mr-2"></i> Ascendance
+                </h3>
+                <div id="ascendanceContent" class="space-y-3">
+                    <p class="text-gray-500 text-sm">Chargement...</p>
                 </div>
             </div>
 
-            <!-- Formulaire d'ajout rapide -->
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-user-plus text-primary"></i>
-                    Ajouter un membre
-                    <span id="parentInfo" class="text-sm font-normal text-gray-500"></span>
-                </h2>
-                <form id="addMemberForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="hidden" id="parentIdField" value="">
-                    <input type="hidden" id="positionField" value="">
-                    <input type="text" id="nom" placeholder="Nom *" required 
-                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                    <input type="text" id="prenom" placeholder="Prénom *" required 
-                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                    <input type="tel" id="telephone" placeholder="Téléphone *" required 
-                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                    <input type="email" id="email" placeholder="Email *" required 
-                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                    <input type="text" id="codeParrain" placeholder="Code parrain (auto)" 
-                           class="px-4 py-2.5 border border-gray-300 rounded-xl bg-gray-50 text-gray-500 focus:outline-none cursor-default" readonly>
-                    <button type="submit" class="btn-primary w-full flex items-center justify-center gap-2">
-                        <i class="fas fa-plus"></i> Ajouter
-                    </button>
-                </form>
-                <div id="formMessage" class="mt-3 text-sm hidden"></div>
+            <!-- Descendance (Enfants) -->
+            <div id="descendance" class="bg-white rounded-2xl shadow-lg p-6 fade-in">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">
+                    <i class="fas fa-arrow-down text-green-600 mr-2"></i> Descendance
+                </h3>
+                <div id="descendanceContent" class="space-y-3">
+                    <p class="text-gray-500 text-sm">Chargement...</p>
+                </div>
             </div>
+        </div>
 
-            <!-- Liste des membres modernisée -->
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-users text-primary"></i>
-                        Membres
-                        <span class="text-sm font-normal text-gray-400" id="memberCount">(0)</span>
-                    </h2>
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="searchMember" placeholder="Rechercher..." 
-                               class="pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:outline-none transition w-48 md:w-64">
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="text-gray-500 border-b border-gray-200">
-                            <tr>
-                                <th class="text-left py-3 font-semibold">Membre</th>
-                                <th class="text-left py-3 font-semibold hidden md:table-cell">Email</th>
-                                <th class="text-left py-3 font-semibold hidden lg:table-cell">Parrain</th>
-                                <th class="text-left py-3 font-semibold">Statut</th>
-                                <th class="text-right py-3 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="membersList"></tbody>
-                    </table>
-                </div>
-            </div>
+        <!-- Aucun résultat -->
+        <div id="noResult" class="hidden text-center py-12">
+            <i class="fas fa-user-slash text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-600">Aucun membre trouvé</h3>
+            <p class="text-gray-400 text-sm mt-2">Vérifiez que le code ou l'email est correct</p>
         </div>
     </main>
-
-    <!-- Modal d'ajout -->
-    <div id="addModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-overlay absolute inset-0" onclick="closeAddModal()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl max-w-md w-full p-6 modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-user-plus text-primary"></i>
-                    Ajouter un filleul
-                </h3>
-                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 transition">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            <p class="text-sm text-gray-500 mb-4" id="modalParentInfo">Position sous: ...</p>
-            <form id="modalAddForm" class="space-y-4">
-                <input type="hidden" id="modalParentId" value="">
-                <input type="hidden" id="modalPosition" value="">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Nom *</label>
-                        <input type="text" id="modalNom" required 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Prénom *</label>
-                        <input type="text" id="modalPrenom" required 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Téléphone *</label>
-                    <input type="tel" id="modalTelephone" required 
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Email *</label>
-                    <input type="email" id="modalEmail" required 
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
-                </div>
-                <div id="modalError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"></div>
-                <button type="submit" class="w-full py-3 px-4 bg-primary text-white rounded-xl hover:bg-primary-dark transition font-semibold">
-                    <i class="fas fa-spinner fa-spin hidden mr-2" id="modalLoading"></i>
-                    <span id="modalBtnText">Ajouter le filleul</span>
-                </button>
-            </form>
-        </div>
-    </div>
 
     <script>
         // ============================================
         // TOAST
         // ============================================
 
-        function showToast(message, type = 'success') {
+        function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = `toast toast-${type} show`;
-            clearTimeout(toast._timeout);
-            toast._timeout = setTimeout(() => toast.classList.remove('show'), 4000);
+            setTimeout(() => toast.classList.remove('show'), 4000);
         }
-
-        // ============================================
-        // ADMIN LOGIN
-        // ============================================
-
-        const ADMIN_PASSWORD = "admin123";
-
-        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const password = document.getElementById('adminPassword').value;
-            if (password === ADMIN_PASSWORD) {
-                document.getElementById('loginAdmin').classList.add('hidden');
-                document.getElementById('adminContent').classList.remove('hidden');
-                loadAdminData();
-            } else {
-                document.getElementById('loginError').classList.remove('hidden');
-            }
-        });
-
-        // ============================================
-        // VARIABLES
-        // ============================================
-
-        let allMembers = [];
-        let usersMap = {};
-        let levelsCache = {};
-
-        // ============================================
-        // LOAD ADMIN DATA
-        // ============================================
-
-        async function loadAdminData() {
-            await loadMembers();
-            await loadStats();
-            await loadTree();
-        }
-
-        // ============================================
-        // LOAD MEMBERS
-        // ============================================
-
-        async function loadMembers() {
-            try {
-                const snapshot = await db.collection('users').get();
-                allMembers = [];
-                usersMap = {};
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    allMembers.push({ id: doc.id, ...data });
-                    usersMap[doc.id] = { id: doc.id, ...data };
-                });
-                renderMembers(allMembers);
-                document.getElementById('memberCount').textContent = `(${allMembers.length})`;
-            } catch (error) {
-                console.error('Erreur chargement membres:', error);
-                showToast('Erreur chargement des membres', 'error');
-            }
-        }
-
-        function renderMembers(members) {
-            const tbody = document.getElementById('membersList');
-            if (members.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">Aucun membre</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = members.map(m => {
-                const initial = (m.prenom?.[0] || '?').toUpperCase();
-                const isActive = m.statut === 'actif';
-                const avatarClass = isActive ? 'active' : 'suspended';
-                return `
-                    <tr class="member-row">
-                        <td class="py-3">
-                            <div class="flex items-center gap-3">
-                                <div class="member-avatar ${avatarClass}">
-                                    ${initial}
-                                </div>
-                                <div>
-                                    <div class="font-medium text-gray-800">${m.prenom || ''} ${m.nom || ''}</div>
-                                    <div class="text-xs text-gray-400 font-mono">${m.codeMembre || '---'}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="py-3 hidden md:table-cell text-gray-600 text-sm">${m.email || '---'}</td>
-                        <td class="py-3 hidden lg:table-cell text-gray-500 text-sm">${m.codeParrain || '-'}</td>
-                        <td class="py-3">
-                            <span class="status-badge ${isActive ? 'status-active' : 'status-suspended'}">
-                                ${isActive ? 'Actif' : 'Suspendu'}
-                            </span>
-                        </td>
-                        <td class="py-3 text-right">
-                            <button onclick="toggleStatus('${m.id}')" 
-                                    class="text-${isActive ? 'yellow' : 'green'}-500 hover:text-${isActive ? 'yellow' : 'green'}-700 transition px-2">
-                                <i class="fas ${isActive ? 'fa-pause' : 'fa-play'}"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // ============================================
-        // LOAD STATS
-        // ============================================
-
-        async function loadStats() {
-            try {
-                const snapshot = await db.collection('users').get();
-                let total = 0, actifs = 0, suspendus = 0;
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    total++;
-                    if (data.statut === 'actif') actifs++;
-                    if (data.statut === 'suspendu') suspendus++;
-                });
-
-                document.getElementById('totalMembres').textContent = total;
-                document.getElementById('actifsMembres').textContent = actifs;
-                document.getElementById('suspendusMembres').textContent = suspendus;
-
-                // Calcul des niveaux
-                let niveaux = 0;
-                const rootId = await findRoot();
-                if (rootId) {
-                    const queue = [{ id: rootId, level: 0 }];
-                    const visited = new Set();
-                    while (queue.length > 0) {
-                        const { id, level } = queue.shift();
-                        if (visited.has(id)) continue;
-                        visited.add(id);
-                        if (level > niveaux) niveaux = level;
-                        
-                        const data = usersMap[id];
-                        if (data) {
-                            if (data.leftChildId) queue.push({ id: data.leftChildId, level: level + 1 });
-                            if (data.rightChildId) queue.push({ id: data.rightChildId, level: level + 1 });
-                        }
-                    }
-                }
-                document.getElementById('niveauxArbre').textContent = niveaux + 1;
-
-            } catch (error) {
-                console.error('Erreur stats:', error);
-            }
-        }
-
-        // ============================================
-        // FIND ROOT
-        // ============================================
-
-        async function findRoot() {
-            try {
-                const query = await db.collection('users')
-                    .where('position', '==', null)
-                    .limit(1)
-                    .get();
-                
-                if (!query.empty) {
-                    return query.docs[0].id;
-                }
-                
-                const first = await db.collection('users')
-                    .orderBy('dateInscription')
-                    .limit(1)
-                    .get();
-                
-                return first.empty ? null : first.docs[0].id;
-            } catch (error) {
-                console.error('Erreur findRoot:', error);
-                return null;
-            }
-        }
-
-        // ============================================
-        // FIND NEXT AVAILABLE POSITION (BFS)
-        // ============================================
-
-        async function findNextAvailablePosition(rootId) {
-            if (!rootId) {
-                return { parentId: null, position: null };
-            }
-            
-            const queue = [rootId];
-            const visited = new Set();
-            
-            while (queue.length > 0) {
-                const currentId = queue.shift();
-                if (visited.has(currentId)) continue;
-                visited.add(currentId);
-                
-                const data = usersMap[currentId];
-                if (!data) continue;
-                
-                if (!data.leftChildId) {
-                    return { parentId: currentId, position: 'left' };
-                }
-                if (data.leftChildId && !visited.has(data.leftChildId)) {
-                    queue.push(data.leftChildId);
-                }
-                
-                if (!data.rightChildId) {
-                    return { parentId: currentId, position: 'right' };
-                }
-                if (data.rightChildId && !visited.has(data.rightChildId)) {
-                    queue.push(data.rightChildId);
-                }
-            }
-            
-            return { parentId: rootId, position: 'left' };
-        }
-
-        // ============================================
-        // GENERATE MEMBER CODE
-        // ============================================
-
-        async function generateMemberCode() {
-            const counterRef = db.collection('counters').doc('memberCode');
-            try {
-                const result = await db.runTransaction(async (transaction) => {
-                    const counterDoc = await transaction.get(counterRef);
-                    let currentNumber = counterDoc.exists ? counterDoc.data().currentNumber : 0;
-                    currentNumber++;
-                    transaction.set(counterRef, { currentNumber });
-                    return currentNumber;
-                });
-                return `MB${String(result).padStart(6, '0')}`;
-            } catch (error) {
-                console.error('Erreur génération code:', error);
-                const random = Math.floor(Math.random() * 1000000);
-                return `MB${String(random).padStart(6, '0')}`;
-            }
-        }
-
-        // ============================================
-        // AJOUTER MEMBRE
-        // ============================================
-
-        async function ajouterMembre(data) {
-            const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
-            
-            const emailCheck = await db.collection('users')
-                .where('email', '==', email)
-                .limit(1)
-                .get();
-            
-            if (!emailCheck.empty) {
-                throw new Error('Cet email est déjà utilisé');
-            }
-            
-            const codeMembre = await generateMemberCode();
-            
-            let finalParentId = parentId;
-            let finalPosition = position;
-            
-            if (!finalParentId) {
-                const rootId = await findRoot();
-                if (!rootId) {
-                    finalParentId = null;
-                    finalPosition = null;
-                } else {
-                    const pos = await findNextAvailablePosition(rootId);
-                    finalParentId = pos.parentId;
-                    finalPosition = pos.position;
-                }
-            }
-            
-            let parrainCode = codeParrain;
-            let parrainId = null;
-            
-            if (finalParentId) {
-                const parentData = usersMap[finalParentId];
-                if (parentData) {
-                    parrainCode = parentData.codeMembre;
-                    parrainId = finalParentId;
-                }
-            }
-            
-            const userData = {
-                codeMembre: codeMembre,
-                nom: nom,
-                prenom: prenom,
-                telephone: telephone,
-                email: email,
-                codeParrain: parrainCode,
-                parrainId: parrainId,
-                parentId: finalParentId,
-                position: finalPosition,
-                leftChildId: null,
-                rightChildId: null,
-                dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
-                statut: 'actif'
-            };
-            
-            const docRef = await db.collection('users').add(userData);
-            
-            if (finalParentId) {
-                const updateData = {};
-                updateData[finalPosition === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
-                await db.collection('users').doc(finalParentId).update(updateData);
-            }
-            
-            usersMap[docRef.id] = { id: docRef.id, ...userData };
-            
-            return {
-                success: true,
-                id: docRef.id,
-                codeMembre: codeMembre
-            };
-        }
-
-        // ============================================
-        // TOGGLE STATUS
-        // ============================================
-
-        async function toggleStatus(id) {
-            try {
-                const doc = await db.collection('users').doc(id).get();
-                if (!doc.exists) return;
-                const current = doc.data().statut;
-                const newStatus = current === 'actif' ? 'suspendu' : 'actif';
-                await db.collection('users').doc(id).update({ statut: newStatus });
-                await loadAdminData();
-                showToast(`Statut mis à jour : ${newStatus}`, 'success');
-            } catch (error) {
-                showToast('Erreur', 'error');
-            }
-        }
-
-        // ============================================
-        // LOAD TREE (avec niveaux et design amélioré)
-        // ============================================
-
-        // Calcule le niveau de chaque nœud (profondeur)
-        function computeLevels(rootId) {
-            const levels = {};
-            const queue = [{ id: rootId, level: 0 }];
-            const visited = new Set();
-            while (queue.length > 0) {
-                const { id, level } = queue.shift();
-                if (visited.has(id)) continue;
-                visited.add(id);
-                levels[id] = level;
-                const data = usersMap[id];
-                if (data) {
-                    if (data.leftChildId && usersMap[data.leftChildId]) {
-                        queue.push({ id: data.leftChildId, level: level + 1 });
-                    }
-                    if (data.rightChildId && usersMap[data.rightChildId]) {
-                        queue.push({ id: data.rightChildId, level: level + 1 });
-                    }
-                }
-            }
-            return levels;
-        }
-
-        function buildTreeWithAddButtons(nodeId, isRoot = false) {
-            const node = usersMap[nodeId];
-            if (!node) return null;
-
-            const level = levelsCache[nodeId] ?? 0;
-            const levelLabel = level === 0 ? 'Racine' : `Niveau ${level}`;
-
-            let nodeClass = 'tree-node-content';
-            if (isRoot) nodeClass += ' root';
-
-            const positionLabel = node.position === 'left' ? '⬅' : node.position === 'right' ? '➡' : '';
-            
-            let html = `
-                <div class="tree-node" data-level="${level}">
-                    <div class="${nodeClass}">
-                        <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
-                        <div class="node-code">${node.codeMembre || '---'}</div>
-                        <div class="node-level">${levelLabel}</div>
-                        ${positionLabel ? `<div style="font-size:10px;color:${isRoot ? 'rgba(255,255,255,0.6)' : '#9ca3af'}">${positionLabel}</div>` : ''}
-                    </div>
-            `;
-
-            const hasLeft = node.leftChildId && usersMap[node.leftChildId];
-            const hasRight = node.rightChildId && usersMap[node.rightChildId];
-
-            html += `<div class="tree-children">`;
-            
-            if (hasLeft) {
-                html += `<div class="tree-child">${buildTreeWithAddButtons(node.leftChildId)}</div>`;
-            } else {
-                html += `
-                    <div class="tree-child">
-                        <div class="free-slot" onclick="openAddModal('${nodeId}', 'left', '${node.codeMembre}', '${node.prenom} ${node.nom}')">
-                            <div class="add-btn">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>Ajouter</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (hasRight) {
-                html += `<div class="tree-child">${buildTreeWithAddButtons(node.rightChildId)}</div>`;
-            } else {
-                html += `
-                    <div class="tree-child">
-                        <div class="free-slot" onclick="openAddModal('${nodeId}', 'right', '${node.codeMembre}', '${node.prenom} ${node.nom}')">
-                            <div class="add-btn">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>Ajouter</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            html += `</div>`;
-            html += `</div>`;
-            return html;
-        }
-
-        async function loadTree() {
-            try {
-                const snapshot = await db.collection('users').get();
-                usersMap = {};
-                snapshot.forEach(doc => {
-                    usersMap[doc.id] = { id: doc.id, ...doc.data() };
-                });
-
-                let rootId = null;
-                for (const [id, data] of Object.entries(usersMap)) {
-                    if (!data.position) { rootId = id; break; }
-                }
-
-                const container = document.getElementById('treeContent');
-                if (rootId && usersMap[rootId]) {
-                    // Calcul des niveaux
-                    levelsCache = computeLevels(rootId);
-                    container.innerHTML = buildTreeWithAddButtons(rootId, true);
-                } else {
-                    container.innerHTML = `
-                        <div class="text-gray-400 text-center py-10">
-                            <i class="fas fa-tree text-4xl mb-3"></i>
-                            <p class="text-lg font-medium">Aucun arbre</p>
-                            <p class="text-sm">Ajoutez le premier membre via le formulaire</p>
-                        </div>
-                    `;
-                }
-
-            } catch (error) {
-                console.error('Erreur chargement arbre:', error);
-            }
-        }
-
-        document.getElementById('refreshTree').addEventListener('click', function() {
-            loadTree();
-            showToast('🔄 Arbre rafraîchi', 'info');
-        });
-
-        // ============================================
-        // MODAL AJOUT
-        // ============================================
-
-        function openAddModal(parentId, position, parentCode, parentName) {
-            document.getElementById('modalParentId').value = parentId;
-            document.getElementById('modalPosition').value = position;
-            document.getElementById('modalParentInfo').textContent = 
-                `Position: ${position === 'left' ? '⬅ Gauche' : '➡ Droite'} sous ${parentName} (${parentCode})`;
-            
-            document.getElementById('addModal').classList.remove('hidden');
-            document.getElementById('modalAddForm').reset();
-            document.getElementById('modalError').classList.add('hidden');
-        }
-
-        function closeAddModal() {
-            document.getElementById('addModal').classList.add('hidden');
-        }
-
-        document.getElementById('addModal').addEventListener('click', function(e) {
-            if (e.target === this) closeAddModal();
-        });
-
-        // ============================================
-        // MODAL AJOUT SUBMIT
-        // ============================================
-
-        document.getElementById('modalAddForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const parentId = document.getElementById('modalParentId').value;
-            const position = document.getElementById('modalPosition').value;
-            const nom = document.getElementById('modalNom').value.trim();
-            const prenom = document.getElementById('modalPrenom').value.trim();
-            const telephone = document.getElementById('modalTelephone').value.trim();
-            const email = document.getElementById('modalEmail').value.trim();
-
-            const errorDiv = document.getElementById('modalError');
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const loading = document.getElementById('modalLoading');
-            const btnText = document.getElementById('modalBtnText');
-
-            if (!nom || !prenom || !telephone || !email) {
-                errorDiv.textContent = 'Tous les champs sont obligatoires';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            loading.classList.remove('hidden');
-            btnText.textContent = 'Ajout en cours...';
-            submitBtn.disabled = true;
-            errorDiv.classList.add('hidden');
-
-            try {
-                const result = await ajouterMembre({
-                    nom, prenom, telephone, email,
-                    parentId: parentId,
-                    position: position,
-                    codeParrain: null
-                });
-
-                if (result.success) {
-                    showToast(`✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`, 'success');
-                    closeAddModal();
-                    await loadAdminData();
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-                errorDiv.textContent = '❌ ' + error.message;
-                errorDiv.classList.remove('hidden');
-            } finally {
-                loading.classList.add('hidden');
-                btnText.textContent = 'Ajouter le filleul';
-                submitBtn.disabled = false;
-            }
-        });
-
-        // ============================================
-        // FORMULAIRE PRINCIPAL
-        // ============================================
-
-        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const nom = document.getElementById('nom').value.trim();
-            const prenom = document.getElementById('prenom').value.trim();
-            const telephone = document.getElementById('telephone').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const parentId = document.getElementById('parentIdField').value || null;
-            const position = document.getElementById('positionField').value || null;
-
-            const message = document.getElementById('formMessage');
-
-            if (!nom || !prenom || !telephone || !email) {
-                message.className = 'mt-3 text-sm text-red-600';
-                message.textContent = 'Tous les champs sont obligatoires';
-                message.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                const result = await ajouterMembre({
-                    nom, prenom, telephone, email,
-                    parentId: parentId,
-                    position: position,
-                    codeParrain: null
-                });
-
-                if (result.success) {
-                    message.className = 'mt-3 text-sm text-green-600';
-                    message.textContent = `✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`;
-                    message.classList.remove('hidden');
-                    document.getElementById('addMemberForm').reset();
-                    await loadAdminData();
-                }
-            } catch (error) {
-                message.className = 'mt-3 text-sm text-red-600';
-                message.textContent = '❌ ' + error.message;
-                message.classList.remove('hidden');
-            }
-        });
 
         // ============================================
         // RECHERCHE
         // ============================================
 
-        document.getElementById('searchMember').addEventListener('input', function() {
-            const search = this.value.toLowerCase();
-            const filtered = allMembers.filter(m => 
-                m.codeMembre?.toLowerCase().includes(search) ||
-                m.nom?.toLowerCase().includes(search) ||
-                m.prenom?.toLowerCase().includes(search) ||
-                m.email?.toLowerCase().includes(search)
-            );
-            renderMembers(filtered);
+        let usersMap = {};
+
+        async function loadAllUsers() {
+            const snapshot = await db.collection('users').get();
+            usersMap = {};
+            snapshot.forEach(doc => {
+                usersMap[doc.id] = { id: doc.id, ...doc.data() };
+            });
+        }
+
+        async function searchMember(searchTerm) {
+            if (!searchTerm || searchTerm.length < 2) {
+                showToast('Veuillez entrer un code ou un email valide', 'error');
+                return;
+            }
+
+            searchTerm = searchTerm.trim();
+
+            // Chercher par code ou email
+            let found = null;
+            for (const [id, data] of Object.entries(usersMap)) {
+                if (data.codeMembre === searchTerm || data.email === searchTerm) {
+                    found = { id, ...data };
+                    break;
+                }
+            }
+
+            if (!found) {
+                document.getElementById('results').classList.add('hidden');
+                document.getElementById('noResult').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('noResult').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+
+            // Afficher le profil
+            displayProfile(found);
+            
+            // Afficher l'ascendance
+            displayAscendance(found);
+            
+            // Afficher la descendance
+            displayDescendance(found);
+        }
+
+        // ============================================
+        // AFFICHAGE DU PROFIL
+        // ============================================
+
+        function displayProfile(member) {
+            document.getElementById('memberInitial').textContent = (member.prenom?.[0] || 'U').toUpperCase();
+            document.getElementById('memberName').textContent = `${member.prenom || ''} ${member.nom || ''}`.trim() || 'Inconnu';
+            document.getElementById('memberCode').textContent = member.codeMembre || '---';
+            document.getElementById('memberEmail').textContent = member.email || '---';
+            document.getElementById('memberPhone').textContent = member.telephone || 'Non renseigné';
+            
+            const positionMap = { 'left': 'Gauche', 'right': 'Droite', null: 'Racine' };
+            document.getElementById('memberPosition').textContent = positionMap[member.position] || '---';
+
+            const statusEl = document.getElementById('memberStatus');
+            if (member.statut === 'actif') {
+                statusEl.className = 'status-badge status-active ml-auto';
+                statusEl.textContent = 'Actif';
+            } else {
+                statusEl.className = 'status-badge status-suspended ml-auto';
+                statusEl.textContent = 'Suspendu';
+            }
+        }
+
+        // ============================================
+        // ASCENDANCE (Parrain + Parent)
+        // ============================================
+
+        function displayAscendance(member) {
+            const container = document.getElementById('ascendanceContent');
+            let html = '';
+
+            // Parrain
+            if (member.parrainId && usersMap[member.parrainId]) {
+                const parrain = usersMap[member.parrainId];
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                        <i class="fas fa-user-tie text-blue-600"></i>
+                        <div>
+                            <span class="font-medium">Parrain:</span>
+                            <span>${parrain.prenom || ''} ${parrain.nom || ''}</span>
+                            <span class="text-sm text-gray-500 font-mono ml-2">${parrain.codeMembre}</span>
+                        </div>
+                        <a href="javascript:void(0)" onclick="searchMember('${parrain.codeMembre}')" 
+                           class="ml-auto text-blue-600 hover:text-blue-800 text-sm">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <i class="fas fa-user-tie text-gray-400"></i>
+                        <span class="text-gray-500">Aucun parrain (Racine)</span>
+                    </div>
+                `;
+            }
+
+            // Parent
+            if (member.parentId && usersMap[member.parentId]) {
+                const parent = usersMap[member.parentId];
+                const positionLabel = member.position === 'left' ? 'Gauche' : 'Droite';
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                        <i class="fas fa-user-friends text-green-600"></i>
+                        <div>
+                            <span class="font-medium">Parent (${positionLabel}):</span>
+                            <span>${parent.prenom || ''} ${parent.nom || ''}</span>
+                            <span class="text-sm text-gray-500 font-mono ml-2">${parent.codeMembre}</span>
+                        </div>
+                        <a href="javascript:void(0)" onclick="searchMember('${parent.codeMembre}')" 
+                           class="ml-auto text-blue-600 hover:text-blue-800 text-sm">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html || '<p class="text-gray-500 text-sm">Aucune ascendance</p>';
+        }
+
+        // ============================================
+        // DESCENDANCE (Enfants + descendants)
+        // ============================================
+
+        function displayDescendance(member) {
+            const container = document.getElementById('descendanceContent');
+            
+            // Récupérer tous les descendants (BFS)
+            const descendants = [];
+            const queue = [member.id];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+
+                const current = usersMap[currentId];
+                if (!current) continue;
+
+                if (currentId !== member.id) {
+                    descendants.push(current);
+                }
+
+                if (current.leftChildId) queue.push(current.leftChildId);
+                if (current.rightChildId) queue.push(current.rightChildId);
+            }
+
+            if (descendants.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-gray-400">
+                        <i class="fas fa-leaf text-3xl mb-2"></i>
+                        <p>Aucun descendant</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Construire l'arbre des descendants (2 niveaux max pour lisibilité)
+            let html = '<div class="tree-view">';
+            
+            // Enfants directs
+            const enfants = descendants.filter(d => d.parentId === member.id);
+            
+            if (enfants.length === 0) {
+                html += `<p class="text-gray-500 text-sm">Aucun enfant</p>`;
+            } else {
+                html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+                enfants.forEach(enfant => {
+                    const petitsEnfants = descendants.filter(d => d.parentId === enfant.id);
+                    html += `
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-user-child text-green-600"></i>
+                                <span class="font-medium">${enfant.prenom || ''} ${enfant.nom || ''}</span>
+                                <span class="text-xs text-gray-500 font-mono">${enfant.codeMembre}</span>
+                                <a href="javascript:void(0)" onclick="searchMember('${enfant.codeMembre}')" 
+                                   class="ml-auto text-blue-600 hover:text-blue-800 text-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                            ${petitsEnfants.length > 0 ? `
+                                <div class="ml-6 mt-2 space-y-1">
+                                    ${petitsEnfants.map(pe => `
+                                        <div class="flex items-center gap-2 text-sm">
+                                            <i class="fas fa-child text-blue-400"></i>
+                                            <span>${pe.prenom || ''} ${pe.nom || ''}</span>
+                                            <span class="text-xs text-gray-500 font-mono">${pe.codeMembre}</span>
+                                            <a href="javascript:void(0)" onclick="searchMember('${pe.codeMembre}')" 
+                                               class="text-blue-600 hover:text-blue-800 text-xs">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                            ${petitsEnfants.length === 0 ? `<div class="ml-6 mt-1 text-xs text-gray-400">Aucun petit-enfant</div>` : ''}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ============================================
+        // FORMULAIRE DE RECHERCHE
+        // ============================================
+
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) {
+                showToast('Veuillez entrer un code ou un email', 'error');
+                return;
+            }
+            await loadAllUsers();
+            searchMember(searchTerm);
+        });
+
+        // ============================================
+        // RECHERCHE RAPIDE (clique sur un lien)
+        // ============================================
+
+        window.searchMember = async function(term) {
+            document.getElementById('searchInput').value = term;
+            await loadAllUsers();
+            searchMember(term);
+        };
+
+        // ============================================
+        // INITIALISATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllUsers();
         });
     </script>
 </body>
