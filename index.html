@@ -3,202 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CommunityTree - Plateforme d'enregistrement</title>
+    <title>CommunityTree - Arbre Généalogique</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        .hero-card {
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        .tree-icon {
-            font-size: 80px;
-            color: #667eea;
+        .hero-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg fixed w-full z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
-                    <span class="text-xl font-bold text-gray-800">CommunityTree</span>
-                </div>
-                
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#accueil" class="text-gray-700 hover:text-blue-600 transition">Accueil</a>
-                    <a href="#apropos" class="text-gray-700 hover:text-blue-600 transition">À propos</a>
-                    <a href="#fonctionnement" class="text-gray-700 hover:text-blue-600 transition">Comment ça marche</a>
-                    <a href="connexion.html" class="text-gray-700 hover:text-blue-600 transition">Connexion</a>
-                    <a href="inscription.html" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">S'inscrire</a>
-                </div>
-                
-                <div class="md:hidden flex items-center">
-                    <button id="menu-toggle" class="text-gray-700 hover:text-blue-600 focus:outline-none">
-                        <i class="fas fa-bars text-2xl"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="mobile-menu" class="md:hidden hidden bg-white border-t">
-            <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="#accueil" class="block px-3 py-2 text-gray-700 hover:text-blue-600">Accueil</a>
-                <a href="#apropos" class="block px-3 py-2 text-gray-700 hover:text-blue-600">À propos</a>
-                <a href="#fonctionnement" class="block px-3 py-2 text-gray-700 hover:text-blue-600">Comment ça marche</a>
-                <a href="connexion.html" class="block px-3 py-2 text-gray-700 hover:text-blue-600">Connexion</a>
-                <a href="inscription.html" class="block px-3 py-2 bg-blue-600 text-white rounded-lg text-center">S'inscrire</a>
-            </div>
-        </div>
-    </nav>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
 
-    <!-- Hero Section -->
-    <section id="accueil" class="pt-24 pb-16 min-h-screen flex items-center gradient-bg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div class="text-white">
-                    <h1 class="text-4xl md:text-6xl font-bold leading-tight">
-                        Rejoignez notre <span class="text-yellow-300">communauté</span>
-                    </h1>
-                    <p class="mt-6 text-xl text-white/90">
-                        Une plateforme innovante basée sur un système d'arbre binaire pour 
-                        organiser et développer votre réseau de membres.
-                    </p>
-                    <div class="mt-10 flex flex-col sm:flex-row gap-4">
-                        <a href="inscription.html" class="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition transform hover:scale-105 inline-flex items-center justify-center">
-                            <i class="fas fa-user-plus mr-2"></i>
-                            Créer mon compte
-                        </a>
-                        <a href="connexion.html" class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white/10 transition inline-flex items-center justify-center">
-                            <i class="fas fa-sign-in-alt mr-2"></i>
-                            Se connecter
-                        </a>
-                    </div>
-                </div>
-                <div class="hidden md:block">
-                    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8">
-                        <div class="text-center text-white">
-                            <i class="fas fa-sitemap tree-icon"></i>
-                            <div class="mt-6 grid grid-cols-3 gap-4">
-                                <div class="bg-white/20 rounded-lg p-4">
-                                    <i class="fas fa-user text-3xl"></i>
-                                    <p class="mt-2 text-sm">Membres</p>
-                                </div>
-                                <div class="bg-white/20 rounded-lg p-4">
-                                    <i class="fas fa-users text-3xl"></i>
-                                    <p class="mt-2 text-sm">Communauté</p>
-                                </div>
-                                <div class="bg-white/20 rounded-lg p-4">
-                                    <i class="fas fa-chart-line text-3xl"></i>
-                                    <p class="mt-2 text-sm">Croissance</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
+        <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
+            <div class="flex items-center">
+                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+            </div>
+            <div class="flex items-center space-x-4 text-sm">
+                <span id="totalMembres" class="text-gray-500">0 membres</span>
             </div>
         </div>
-    </section>
+    </header>
 
-    <!-- Section À propos -->
-    <section id="apropos" class="py-20 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">
-                À propos de notre plateforme
-            </h2>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="text-center p-6 rounded-xl card-hover transition">
-                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-shield-alt text-blue-600 text-2xl"></i>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-2">Sécurisé</h3>
-                    <p class="text-gray-600">Authentification Firebase et règles de sécurité strictes</p>
-                </div>
-                <div class="text-center p-6 rounded-xl card-hover transition">
-                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-code-branch text-green-600 text-2xl"></i>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-2">Arbre Binaire</h3>
-                    <p class="text-gray-600">Placement automatique intelligent dans l'arbre</p>
-                </div>
-                <div class="text-center p-6 rounded-xl card-hover transition">
-                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-mobile-alt text-purple-600 text-2xl"></i>
-                    </div>
-                    <h3 class="text-xl font-semibold mb-2">Responsive</h3>
-                    <p class="text-gray-600">Optimisé pour mobile et desktop</p>
-                </div>
-            </div>
+    <!-- Hero -->
+    <main class="pt-20 px-4 pb-8 max-w-6xl mx-auto">
+        <div class="gradient-bg rounded-3xl p-8 md:p-12 text-white text-center mb-12">
+            <h1 class="text-3xl md:text-5xl font-bold mb-4">
+                <i class="fas fa-tree mr-3"></i>
+                Arbre Généalogique
+            </h1>
+            <p class="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
+                Suivez l'évolution de votre communauté grâce à notre système d'arbre binaire
+            </p>
         </div>
-    </section>
 
-    <!-- Section Comment ça marche -->
-    <section id="fonctionnement" class="py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">
-                Comment ça marche ?
-            </h2>
-            <div class="grid md:grid-cols-4 gap-6">
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
-                        1
-                    </div>
-                    <h3 class="font-semibold mb-2">Inscription</h3>
-                    <p class="text-gray-600 text-sm">Créez votre compte avec votre code parrain</p>
+        <!-- 3 Cartes -->
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Carte Admin -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 text-center hero-card">
+                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-crown text-purple-600 text-2xl"></i>
                 </div>
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
-                        2
-                    </div>
-                    <h3 class="font-semibold mb-2">Placement</h3>
-                    <p class="text-gray-600 text-sm">Système automatique dans l'arbre binaire</p>
-                </div>
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
-                        3
-                    </div>
-                    <h3 class="font-semibold mb-2">Croissance</h3>
-                    <p class="text-gray-600 text-sm">Développez votre réseau et suivez vos descendants</p>
-                </div>
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
-                        4
-                    </div>
-                    <h3 class="font-semibold mb-2">Visualisation</h3>
-                    <p class="text-gray-600 text-sm">Consultez votre arbre en temps réel</p>
-                </div>
+                <h2 class="text-xl font-bold text-gray-800">Administration</h2>
+                <p class="text-gray-500 text-sm mt-2">Gérer les membres et l'arbre</p>
+                <a href="admin.html" class="mt-4 inline-block px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                    Accéder
+                </a>
             </div>
-        </div>
-    </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <i class="fas fa-tree text-2xl text-blue-400 mb-2"></i>
-                <p class="text-gray-400">© 2024 CommunityTree. Tous droits réservés.</p>
+            <!-- Carte Généalogie -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 text-center hero-card">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-sitemap text-blue-600 text-2xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800">Ma Généalogie</h2>
+                <p class="text-gray-500 text-sm mt-2">Trouvez votre arbre avec votre code</p>
+                <a href="genealogie.html" class="mt-4 inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    Rechercher
+                </a>
+            </div>
+
+            <!-- Carte Arbre Complet -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 text-center hero-card">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-tree text-green-600 text-2xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800">Arbre Complet</h2>
+                <p class="text-gray-500 text-sm mt-2">Visualiser tout l'arbre</p>
+                <a href="arbre.html" class="mt-4 inline-block px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                    Voir
+                </a>
             </div>
         </div>
-    </footer>
+
+        <!-- Stats rapides -->
+        <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-2xl font-bold text-blue-600" id="statTotal">0</p>
+                <p class="text-sm text-gray-500">Membres</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-2xl font-bold text-green-600" id="statNiveaux">0</p>
+                <p class="text-sm text-gray-500">Niveaux</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-2xl font-bold text-purple-600" id="statFeuilles">0</p>
+                <p class="text-sm text-gray-500">Feuilles</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-2xl font-bold text-orange-600" id="statRacine">-</p>
+                <p class="text-sm text-gray-500">Racine</p>
+            </div>
+        </div>
+    </main>
 
     <script>
-        // Menu mobile toggle
-        document.getElementById('menu-toggle').addEventListener('click', function() {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
-        });
-
-        // Vérifier si l'utilisateur est déjà connecté
-        firebase.auth().onAuthStateChanged((user) => {
-            if (user) {
-                // Rediriger vers le dashboard si connecté
-                window.location.href = 'dashboard.html';
+        // Charger les stats
+        async function loadStats() {
+            try {
+                const snapshot = await db.collection('users').get();
+                const membres = [];
+                snapshot.forEach(doc => membres.push(doc.data()));
+                
+                document.getElementById('statTotal').textContent = membres.length;
+                document.getElementById('totalMembres').textContent = membres.length + ' membres';
+                
+                // Trouver la racine
+                const racine = membres.find(m => !m.position);
+                document.getElementById('statRacine').textContent = racine ? 
+                    (racine.prenom || '') + ' ' + (racine.nom || '') : '-';
+                
+                // Compter les niveaux
+                let niveaux = 0;
+                let feuilles = 0;
+                // ... calcul simplifié
+                
+            } catch (error) {
+                console.error('Erreur stats:', error);
             }
-        });
+        }
+        loadStats();
     </script>
 </body>
-          </html>
+</html>
