@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - CommunityTree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        .member-row:hover { background: #f8fafc; }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-suspended { background: #fee2e2; color: #991b1b; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
+        <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
+            <div class="flex items-center">
+                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+                <span class="ml-3 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Admin</span>
+            </div>
+            <a href="index.html" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+    </header>
+
+    <main class="pt-20 px-4 pb-8 max-w-6xl mx-auto">
+        <!-- Vérification mot de passe -->
+        <div id="loginAdmin" class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow-xl p-8">
+            <div class="text-center mb-6">
+                <i class="fas fa-lock text-4xl text-purple-600 mb-3"></i>
+                <h2 class="text-2xl font-bold text-gray-800">Accès Admin</h2>
+                <p class="text-gray-500 text-sm">Entrez le mot de passe pour continuer</p>
+            </div>
+            <form id="adminLoginForm">
+                <input type="password" id="adminPassword" placeholder="Mot de passe" 
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none mb-4">
+                <button type="submit" class="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                    <i class="fas fa-unlock mr-2"></i> Accéder
+                </button>
+                <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden">Mot de passe incorrect</p>
+            </form>
+        </div>
+
+        <!-- Contenu Admin (caché) -->
+        <div id="adminContent" class="hidden">
+            <!-- Stats rapides -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <p class="text-sm text-gray-500">Total</p>
+                    <p class="text-2xl font-bold text-gray-800" id="totalMembres">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <p class="text-sm text-gray-500">Actifs</p>
+                    <p class="text-2xl font-bold text-green-600" id="actifsMembres">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <p class="text-sm text-gray-500">Suspendus</p>
+                    <p class="text-2xl font-bold text-red-600" id="suspendusMembres">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <p class="text-sm text-gray-500">Niveaux</p>
+                    <p class="text-2xl font-bold text-purple-600" id="niveauxArbre">0</p>
+                </div>
+            </div>
+
+            <!-- Ajouter un membre -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-user-plus text-blue-600 mr-2"></i> Ajouter un membre
+                </h2>
+                <form id="addMemberForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" id="nom" placeholder="Nom *" required 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="prenom" placeholder="Prénom *" required 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="tel" id="telephone" placeholder="Téléphone *" required 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="email" id="email" placeholder="Email *" required 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="codeParrain" placeholder="Code parrain *" required 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-plus mr-2"></i> Ajouter
+                    </button>
+                </form>
+                <div id="formMessage" class="mt-3 text-sm hidden"></div>
+            </div>
+
+            <!-- Liste des membres -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-users text-blue-600 mr-2"></i> Membres
+                    </h2>
+                    <input type="text" id="searchMember" placeholder="Rechercher..." 
+                           class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="text-gray-500 border-b">
+                            <tr>
+                                <th class="text-left py-2">Code</th>
+                                <th class="text-left py-2 hidden md:table-cell">Nom</th>
+                                <th class="text-left py-2">Email</th>
+                                <th class="text-left py-2 hidden lg:table-cell">Parrain</th>
+                                <th class="text-left py-2">Statut</th>
+                                <th class="text-right py-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // ADMIN LOGIN
+        // ============================================
+        const ADMIN_PASSWORD = "admin123"; // À changer !
+
+        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('loginAdmin').classList.add('hidden');
+                document.getElementById('adminContent').classList.remove('hidden');
+                loadAdminData();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        });
+
+        // ============================================
+        // FONCTIONS DE L'ADMIN
+        // ============================================
+
+        let allMembers = [];
+
+        async function loadAdminData() {
+            await loadMembers();
+            await loadStats();
+        }
+
+        async function loadMembers() {
+            try {
+                const snapshot = await db.collection('users').get();
+                allMembers = [];
+                snapshot.forEach(doc => {
+                    allMembers.push({ id: doc.id, ...doc.data() });
+                });
+                renderMembers(allMembers);
+            } catch (error) {
+                console.error('Erreur chargement membres:', error);
+            }
+        }
+
+        function renderMembers(members) {
+            const tbody = document.getElementById('membersList');
+            if (members.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Aucun membre</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = members.map(m => `
+                <tr class="member-row border-b">
+                    <td class="py-2 font-mono text-sm">${m.codeMembre || '---'}</td>
+                    <td class="py-2 hidden md:table-cell">${m.prenom || ''} ${m.nom || ''}</td>
+                    <td class="py-2 text-sm">${m.email || '---'}</td>
+                    <td class="py-2 hidden lg:table-cell">${m.codeParrain || '-'}</td>
+                    <td class="py-2">
+                        <span class="status-badge ${m.statut === 'actif' ? 'status-active' : 'status-suspended'}">
+                            ${m.statut === 'actif' ? 'Actif' : 'Suspendu'}
+                        </span>
+                    </td>
+                    <td class="py-2 text-right">
+                        <button onclick="toggleStatus('${m.id}')" class="text-yellow-500 hover:text-yellow-700 mx-1">
+                            <i class="fas ${m.statut === 'actif' ? 'fa-pause' : 'fa-play'}"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Recherche
+        document.getElementById('searchMember').addEventListener('input', function() {
+            const search = this.value.toLowerCase();
+            const filtered = allMembers.filter(m => 
+                m.codeMembre?.toLowerCase().includes(search) ||
+                m.nom?.toLowerCase().includes(search) ||
+                m.prenom?.toLowerCase().includes(search) ||
+                m.email?.toLowerCase().includes(search)
+            );
+            renderMembers(filtered);
+        });
+
+        // ============================================
+        // AJOUT D'UN MEMBRE
+        // ============================================
+
+        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const nom = document.getElementById('nom').value.trim();
+            const prenom = document.getElementById('prenom').value.trim();
+            const telephone = document.getElementById('telephone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const codeParrain = document.getElementById('codeParrain').value.trim();
+
+            const message = document.getElementById('formMessage');
+
+            if (!nom || !prenom || !telephone || !email || !codeParrain) {
+                message.className = 'mt-3 text-sm text-red-600';
+                message.textContent = 'Tous les champs sont obligatoires';
+                message.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // Vérifier le parrain
+                const parrainQuery = await db.collection('users')
+                    .where('codeMembre', '==', codeParrain)
+                    .limit(1)
+                    .get();
+                
+                if (parrainQuery.empty) {
+                    message.className = 'mt-3 text-sm text-red-600';
+                    message.textContent = '❌ Code parrain inexistant';
+                    message.classList.remove('hidden');
+                    return;
+                }
+
+                const parrainDoc = parrainQuery.docs[0];
+
+                // Générer le code
+                const codeMembre = await generateMemberCode();
+
+                // Trouver la position
+                const rootId = await findRoot();
+                let parentId = null, position = null;
+
+                if (rootId) {
+                    const pos = await findNextAvailablePosition(rootId);
+                    parentId = pos.parentId;
+                    position = pos.position;
+                }
+
+                // Créer le membre
+                const userData = {
+                    codeMembre: codeMembre,
+                    nom: nom,
+                    prenom: prenom,
+                    telephone: telephone,
+                    email: email,
+                    codeParrain: codeParrain,
+                    parrainId: parrainDoc.id,
+                    parentId: parentId,
+                    position: position,
+                    leftChildId: null,
+                    rightChildId: null,
+                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                    statut: 'actif'
+                };
+
+                // Sauvegarder
+                const docRef = await db.collection('users').add(userData);
+
+                // Mettre à jour le parent
+                if (parentId) {
+                    const updateData = {};
+                    updateData[position === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
+                    await db.collection('users').doc(parentId).update(updateData);
+                }
+
+                message.className = 'mt-3 text-sm text-green-600';
+                message.textContent = '✅ Membre ajouté ! Code: ' + codeMembre;
+                message.classList.remove('hidden');
+                
+                document.getElementById('addMemberForm').reset();
+                loadMembers();
+                loadStats();
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                message.className = 'mt-3 text-sm text-red-600';
+                message.textContent = '❌ Erreur: ' + error.message;
+                message.classList.remove('hidden');
+            }
+        });
+
+        // ============================================
+        // FONCTIONS UTILITAIRES
+        // ============================================
+
+        async function generateMemberCode() {
+            const counterRef = db.collection('counters').doc('memberCode');
+            try {
+                const result = await db.runTransaction(async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    let currentNumber = counterDoc.exists ? counterDoc.data().currentNumber : 0;
+                    currentNumber++;
+                    transaction.set(counterRef, { currentNumber });
+                    return currentNumber;
+                });
+                return `MB${String(result).padStart(6, '0')}`;
+            } catch (error) {
+                console.error('Erreur code:', error);
+                return `MB${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`;
+            }
+        }
+
+        async function findRoot() {
+            const query = await db.collection('users').where('position', '==', null).limit(1).get();
+            if (!query.empty) return query.docs[0].id;
+            
+            const first = await db.collection('users').orderBy('dateInscription').limit(1).get();
+            return first.empty ? null : first.docs[0].id;
+        }
+
+        async function findNextAvailablePosition(rootId) {
+            const queue = [rootId];
+            const visited = new Set();
+            
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+                
+                const doc = await db.collection('users').doc(currentId).get();
+                if (!doc.exists) continue;
+                const data = doc.data();
+                
+                if (!data.leftChildId) return { parentId: currentId, position: 'left' };
+                queue.push(data.leftChildId);
+                
+                if (!data.rightChildId) return { parentId: currentId, position: 'right' };
+                queue.push(data.rightChildId);
+            }
+            return { parentId: rootId, position: 'left' };
+        }
+
+        // ============================================
+        // STATS
+        // ============================================
+
+        async function loadStats() {
+            try {
+                const snapshot = await db.collection('users').get();
+                let total = 0, actifs = 0, suspendus = 0;
+                let niveaux = 0;
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    total++;
+                    if (data.statut === 'actif') actifs++;
+                    if (data.statut === 'suspendu') suspendus++;
+                });
+
+                document.getElementById('totalMembres').textContent = total;
+                document.getElementById('actifsMembres').textContent = actifs;
+                document.getElementById('suspendusMembres').textContent = suspendus;
+
+                // Calcul des niveaux (simplifié)
+                const rootId = await findRoot();
+                if (rootId) {
+                    const queue = [{ id: rootId, level: 0 }];
+                    const visited = new Set();
+                    while (queue.length > 0) {
+                        const { id, level } = queue.shift();
+                        if (visited.has(id)) continue;
+                        visited.add(id);
+                        if (level > niveaux) niveaux = level;
+                        
+                        const doc = await db.collection('users').doc(id).get();
+                        if (doc.exists) {
+                            const data = doc.data();
+                            if (data.leftChildId) queue.push({ id: data.leftChildId, level: level + 1 });
+                            if (data.rightChildId) queue.push({ id: data.rightChildId, level: level + 1 });
+                        }
+                    }
+                }
+                document.getElementById('niveauxArbre').textContent = niveaux + 1;
+
+            } catch (error) {
+                console.error('Erreur stats:', error);
+            }
+        }
+
+        // ============================================
+        // CHANGER STATUT
+        // ============================================
+
+        window.toggleStatus = async function(id) {
+            try {
+                const doc = await db.collection('users').doc(id).get();
+                if (!doc.exists) return;
+                const current = doc.data().statut;
+                const newStatus = current === 'actif' ? 'suspendu' : 'actif';
+                await db.collection('users').doc(id).update({ statut: newStatus });
+                loadMembers();
+                loadStats();
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du changement de statut');
+            }
+        };
+    </script>
+</body>
+</html>
