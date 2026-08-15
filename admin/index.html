@@ -17,6 +17,27 @@
         .status-active { background: #dcfce7; color: #166534; }
         .status-suspended { background: #fee2e2; color: #991b1b; }
         .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 999;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+            max-width: 400px;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast-success { background: #16a34a; }
+        .toast-error { background: #dc2626; }
+        .toast-warning { background: #d97706; }
     </style>
 </head>
 <body>
@@ -34,6 +55,9 @@
         const db = firebase.firestore();
         db.settings({ timestampsInSnapshots: true });
     </script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
 
     <!-- Header -->
     <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
@@ -94,6 +118,13 @@
                 <h2 class="text-xl font-bold text-gray-800 mb-4">
                     <i class="fas fa-user-plus text-blue-600 mr-2"></i> Ajouter un membre
                 </h2>
+                
+                <!-- Indication pour le code parrain -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Vous pouvez entrer soit le <strong>code</strong> (ex: MB000001) soit l'<strong>email</strong> du parrain
+                </div>
+
                 <form id="addMemberForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <input type="text" id="nom" placeholder="Nom *" required 
                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
@@ -103,7 +134,7 @@
                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <input type="email" id="email" placeholder="Email *" required 
                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <input type="text" id="codeParrain" placeholder="Code parrain *" required 
+                    <input type="text" id="codeParrain" placeholder="Code OU Email du parrain *" required 
                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                         <i class="fas fa-plus mr-2"></i> Ajouter
@@ -142,8 +173,22 @@
 
     <script>
         // ============================================
+        // TOAST NOTIFICATION
+        // ============================================
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // ============================================
         // ADMIN LOGIN
         // ============================================
+
         const ADMIN_PASSWORD = "admin123"; // À changer !
 
         document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
@@ -179,6 +224,7 @@
                 renderMembers(allMembers);
             } catch (error) {
                 console.error('Erreur chargement membres:', error);
+                showToast('Erreur chargement des membres', 'error');
             }
         }
 
@@ -221,7 +267,7 @@
         });
 
         // ============================================
-        // AJOUT D'UN MEMBRE
+        // AJOUT D'UN MEMBRE (AVEC EMAIL OU CODE)
         // ============================================
 
         document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
@@ -231,11 +277,11 @@
             const prenom = document.getElementById('prenom').value.trim();
             const telephone = document.getElementById('telephone').value.trim();
             const email = document.getElementById('email').value.trim();
-            const codeParrain = document.getElementById('codeParrain').value.trim();
+            const parrainInput = document.getElementById('codeParrain').value.trim();
 
             const message = document.getElementById('formMessage');
 
-            if (!nom || !prenom || !telephone || !email || !codeParrain) {
+            if (!nom || !prenom || !telephone || !email || !parrainInput) {
                 message.className = 'mt-3 text-sm text-red-600';
                 message.textContent = 'Tous les champs sont obligatoires';
                 message.classList.remove('hidden');
@@ -243,25 +289,48 @@
             }
 
             try {
-                // Vérifier le parrain
-                const parrainQuery = await db.collection('users')
-                    .where('codeMembre', '==', codeParrain)
+                // === 1. RECHERCHER LE PARRAIN ===
+                // Par code OU par email
+                let parrainQuery = await db.collection('users')
+                    .where('codeMembre', '==', parrainInput)
                     .limit(1)
                     .get();
-                
+
+                // Si pas trouvé par code, chercher par email
+                if (parrainQuery.empty) {
+                    parrainQuery = await db.collection('users')
+                        .where('email', '==', parrainInput)
+                        .limit(1)
+                        .get();
+                }
+
                 if (parrainQuery.empty) {
                     message.className = 'mt-3 text-sm text-red-600';
-                    message.textContent = '❌ Code parrain inexistant';
+                    message.textContent = '❌ Parrain non trouvé (vérifiez le code ou l\'email)';
                     message.classList.remove('hidden');
                     return;
                 }
 
                 const parrainDoc = parrainQuery.docs[0];
+                const parrainData = parrainDoc.data();
 
-                // Générer le code
+                // === 2. VÉRIFIER SI LE MEMBRE EXISTE DÉJÀ ===
+                const emailCheck = await db.collection('users')
+                    .where('email', '==', email)
+                    .limit(1)
+                    .get();
+
+                if (!emailCheck.empty) {
+                    message.className = 'mt-3 text-sm text-red-600';
+                    message.textContent = '❌ Un membre avec cet email existe déjà';
+                    message.classList.remove('hidden');
+                    return;
+                }
+
+                // === 3. GÉNÉRER LE CODE ===
                 const codeMembre = await generateMemberCode();
 
-                // Trouver la position
+                // === 4. TROUVER LA POSITION ===
                 const rootId = await findRoot();
                 let parentId = null, position = null;
 
@@ -271,14 +340,14 @@
                     position = pos.position;
                 }
 
-                // Créer le membre
+                // === 5. CRÉER LE MEMBRE ===
                 const userData = {
                     codeMembre: codeMembre,
                     nom: nom,
                     prenom: prenom,
                     telephone: telephone,
                     email: email,
-                    codeParrain: codeParrain,
+                    codeParrain: parrainData.codeMembre, // On stocke le code du parrain
                     parrainId: parrainDoc.id,
                     parentId: parentId,
                     position: position,
@@ -288,10 +357,12 @@
                     statut: 'actif'
                 };
 
-                // Sauvegarder
+                console.log('Ajout du membre:', userData);
+
+                // === 6. SAUVEGARDER ===
                 const docRef = await db.collection('users').add(userData);
 
-                // Mettre à jour le parent
+                // === 7. METTRE À JOUR LE PARENT ===
                 if (parentId) {
                     const updateData = {};
                     updateData[position === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
@@ -302,15 +373,18 @@
                 message.textContent = '✅ Membre ajouté ! Code: ' + codeMembre;
                 message.classList.remove('hidden');
                 
+                showToast('✅ Membre ' + prenom + ' ' + nom + ' ajouté ! Code: ' + codeMembre, 'success');
+                
                 document.getElementById('addMemberForm').reset();
-                loadMembers();
-                loadStats();
+                await loadMembers();
+                await loadStats();
 
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('Erreur détaillée:', error);
                 message.className = 'mt-3 text-sm text-red-600';
                 message.textContent = '❌ Erreur: ' + error.message;
                 message.classList.remove('hidden');
+                showToast('❌ Erreur: ' + error.message, 'error');
             }
         });
 
@@ -331,16 +405,23 @@
                 return `MB${String(result).padStart(6, '0')}`;
             } catch (error) {
                 console.error('Erreur code:', error);
-                return `MB${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`;
+                // Fallback : générer un code aléatoire
+                const random = Math.floor(Math.random() * 1000000);
+                return `MB${String(random).padStart(6, '0')}`;
             }
         }
 
         async function findRoot() {
-            const query = await db.collection('users').where('position', '==', null).limit(1).get();
-            if (!query.empty) return query.docs[0].id;
-            
-            const first = await db.collection('users').orderBy('dateInscription').limit(1).get();
-            return first.empty ? null : first.docs[0].id;
+            try {
+                const query = await db.collection('users').where('position', '==', null).limit(1).get();
+                if (!query.empty) return query.docs[0].id;
+                
+                const first = await db.collection('users').orderBy('dateInscription').limit(1).get();
+                return first.empty ? null : first.docs[0].id;
+            } catch (error) {
+                console.error('Erreur findRoot:', error);
+                return null;
+            }
         }
 
         async function findNextAvailablePosition(rootId) {
@@ -352,15 +433,23 @@
                 if (visited.has(currentId)) continue;
                 visited.add(currentId);
                 
-                const doc = await db.collection('users').doc(currentId).get();
-                if (!doc.exists) continue;
-                const data = doc.data();
-                
-                if (!data.leftChildId) return { parentId: currentId, position: 'left' };
-                queue.push(data.leftChildId);
-                
-                if (!data.rightChildId) return { parentId: currentId, position: 'right' };
-                queue.push(data.rightChildId);
+                try {
+                    const doc = await db.collection('users').doc(currentId).get();
+                    if (!doc.exists) continue;
+                    const data = doc.data();
+                    
+                    if (!data.leftChildId) {
+                        return { parentId: currentId, position: 'left' };
+                    }
+                    queue.push(data.leftChildId);
+                    
+                    if (!data.rightChildId) {
+                        return { parentId: currentId, position: 'right' };
+                    }
+                    queue.push(data.rightChildId);
+                } catch (error) {
+                    console.error('Erreur BFS:', error);
+                }
             }
             return { parentId: rootId, position: 'left' };
         }
@@ -397,11 +486,15 @@
                         visited.add(id);
                         if (level > niveaux) niveaux = level;
                         
-                        const doc = await db.collection('users').doc(id).get();
-                        if (doc.exists) {
-                            const data = doc.data();
-                            if (data.leftChildId) queue.push({ id: data.leftChildId, level: level + 1 });
-                            if (data.rightChildId) queue.push({ id: data.rightChildId, level: level + 1 });
+                        try {
+                            const doc = await db.collection('users').doc(id).get();
+                            if (doc.exists) {
+                                const data = doc.data();
+                                if (data.leftChildId) queue.push({ id: data.leftChildId, level: level + 1 });
+                                if (data.rightChildId) queue.push({ id: data.rightChildId, level: level + 1 });
+                            }
+                        } catch (error) {
+                            console.error('Erreur niveau:', error);
                         }
                     }
                 }
@@ -423,11 +516,12 @@
                 const current = doc.data().statut;
                 const newStatus = current === 'actif' ? 'suspendu' : 'actif';
                 await db.collection('users').doc(id).update({ statut: newStatus });
-                loadMembers();
-                loadStats();
+                await loadMembers();
+                await loadStats();
+                showToast('Statut mis à jour', 'success');
             } catch (error) {
                 console.error('Erreur:', error);
-                alert('Erreur lors du changement de statut');
+                showToast('Erreur lors du changement de statut', 'error');
             }
         };
     </script>
