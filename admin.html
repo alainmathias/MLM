@@ -656,75 +656,198 @@
         // FONCTIONS UTILITAIRES
         // ============================================
 
-        async function generateMemberCode() {
-            const counterRef = db.collection('counters').doc('memberCode');
-            try {
-                const result = await db.runTransaction(async (transaction) => {
-                    const counterDoc = await transaction.get(counterRef);
-                    let currentNumber = counterDoc.exists ? counterDoc.data().currentNumber : 0;
-                    currentNumber++;
-                    transaction.set(counterRef, { currentNumber });
-                    return currentNumber;
-                });
-                return `MB${String(result).padStart(6, '0')}`;
-            } catch (error) {
-                const random = Math.floor(Math.random() * 1000000);
-                return `MB${String(random).padStart(6, '0')}`;
-            }
-        }
+        
+        
 
-        async function toggleStatus(id) {
-            try {
-                const doc = await db.collection('users').doc(id).get();
-                if (!doc.exists) return;
-                const current = doc.data().statut;
-                const newStatus = current === 'actif' ? 'suspendu' : 'actif';
-                await db.collection('users').doc(id).update({ statut: newStatus });
-                await loadAdminData();
-                showToast('Statut mis à jour', 'success');
-            } catch (error) {
-                showToast('Erreur', 'error');
-            }
-        }
 
-        // Recherche
-        document.getElementById('searchMember').addEventListener('input', function() {
-            const search = this.value.toLowerCase();
-            const filtered = allMembers.filter(m => 
-                m.codeMembre?.toLowerCase().includes(search) ||
-                m.nom?.toLowerCase().includes(search) ||
-                m.prenom?.toLowerCase().includes(search) ||
-                m.email?.toLowerCase().includes(search)
-            );
-            renderMembers(filtered);
+
+// ============================================
+// FONCTIONS DE PLACEMENT CORRIGÉES
+// ============================================
+
+async function generateMemberCode() {
+    const counterRef = db.collection('counters').doc('memberCode');
+    try {
+        const result = await db.runTransaction(async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            let currentNumber = counterDoc.exists ? counterDoc.data().currentNumber : 0;
+            currentNumber++;
+            transaction.set(counterRef, { currentNumber });
+            return currentNumber;
         });
+        return `MB${String(result).padStart(6, '0')}`;
+    } catch (error) {
+        console.error('Erreur génération code:', error);
+        const random = Math.floor(Math.random() * 1000000);
+        return `MB${String(random).padStart(6, '0')}`;
+    }
+}
 
-        // ============================================
-        // STATS
-        // ============================================
-
-        async function loadStats() {
-            try {
-                const snapshot = await db.collection('users').get();
-                let total = 0, actifs = 0, suspendus = 0;
-                let niveaux = 0;
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    total++;
-                    if (data.statut === 'actif') actifs++;
-                    if (data.statut === 'suspendu') suspendus++;
-                });
-
-                document.getElementById('totalMembres').textContent = total;
-                document.getElementById('actifsMembres').textContent = actifs;
-                document.getElementById('suspendusMembres').textContent = suspendus;
-                document.getElementById('niveauxArbre').textContent = '?';
-
-            } catch (error) {
-                console.error('Erreur stats:', error);
-            }
+// Trouver la racine (premier membre sans position)
+async function findRoot() {
+    try {
+        const query = await db.collection('users')
+            .where('position', '==', null)
+            .limit(1)
+            .get();
+        
+        if (!query.empty) {
+            return query.docs[0].id;
         }
+        
+        // Si pas de racine, prendre le premier membre
+        const first = await db.collection('users')
+            .orderBy('dateInscription')
+            .limit(1)
+            .get();
+        
+        return first.empty ? null : first.docs[0].id;
+    } catch (error) {
+        console.error('Erreur findRoot:', error);
+        return null;
+    }
+}
+
+// BFS corrigé - trouve la première position libre
+async function findNextAvailablePosition(rootId) {
+    if (!rootId) {
+        return { parentId: null, position: null };
+    }
+    
+    const queue = [rootId];
+    const visited = new Set();
+    
+    console.log('🔍 Recherche BFS depuis la racine:', rootId);
+    
+    while (queue.length > 0) {
+        const currentId = queue.shift();
+        
+        if (visited.has(currentId)) continue;
+        visited.add(currentId);
+        
+        try {
+            const doc = await db.collection('users').doc(currentId).get();
+            if (!doc.exists) continue;
+            
+            const data = doc.data();
+            console.log(`📌 Noeud ${data.codeMembre}: gauche=${data.leftChildId}, droite=${data.rightChildId}`);
+            
+            // 🔴 Vérifier d'abord la gauche
+            if (!data.leftChildId) {
+                console.log(`✅ Position libre trouvée: gauche de ${data.codeMembre}`);
+                return { parentId: currentId, position: 'left' };
+            }
+            if (data.leftChildId && !visited.has(data.leftChildId)) {
+                queue.push(data.leftChildId);
+            }
+            
+            // 🔴 Vérifier ensuite la droite
+            if (!data.rightChildId) {
+                console.log(`✅ Position libre trouvée: droite de ${data.codeMembre}`);
+                return { parentId: currentId, position: 'right' };
+            }
+            if (data.rightChildId && !visited.has(data.rightChildId)) {
+                queue.push(data.rightChildId);
+            }
+            
+        } catch (error) {
+            console.error('Erreur BFS:', error);
+        }
+    }
+    
+    // Si l'arbre est plein, ajouter à gauche de la racine
+    console.log('⚠️ Arbre plein, ajout à gauche de la racine');
+    return { parentId: rootId, position: 'left' };
+}
+
+// ============================================
+// AJOUT D'UN MEMBRE (CORRIGÉ)
+// ============================================
+
+async function ajouterMembre(data) {
+    const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
+    
+    // 1. Vérifier si l'email existe déjà
+    const emailCheck = await db.collection('users')
+        .where('email', '==', email)
+        .limit(1)
+        .get();
+    
+    if (!emailCheck.empty) {
+        throw new Error('Cet email est déjà utilisé');
+    }
+    
+    // 2. Générer le code membre
+    const codeMembre = await generateMemberCode();
+    
+    // 3. Si parentId est fourni, on l'utilise directement
+    // Sinon, on cherche la première position libre
+    let finalParentId = parentId;
+    let finalPosition = position;
+    
+    if (!finalParentId) {
+        const rootId = await findRoot();
+        if (!rootId) {
+            // Premier membre → racine
+            finalParentId = null;
+            finalPosition = null;
+        } else {
+            const pos = await findNextAvailablePosition(rootId);
+            finalParentId = pos.parentId;
+            finalPosition = pos.position;
+        }
+    }
+    
+    // 4. Récupérer le code du parrain
+    let parrainCode = codeParrain;
+    let parrainId = null;
+    
+    if (finalParentId) {
+        const parentDoc = await db.collection('users').doc(finalParentId).get();
+        if (parentDoc.exists) {
+            parrainCode = parentDoc.data().codeMembre;
+            parrainId = finalParentId;
+        }
+    }
+    
+    // 5. Créer le membre
+    const userData = {
+        codeMembre: codeMembre,
+        nom: nom,
+        prenom: prenom,
+        telephone: telephone,
+        email: email,
+        codeParrain: parrainCode,
+        parrainId: parrainId,
+        parentId: finalParentId,
+        position: finalPosition,
+        leftChildId: null,
+        rightChildId: null,
+        dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+        statut: 'actif'
+    };
+    
+    console.log('📝 Ajout du membre:', userData);
+    
+    // 6. Sauvegarder
+    const docRef = await db.collection('users').add(userData);
+    
+    // 7. Mettre à jour le parent
+    if (finalParentId) {
+        const updateData = {};
+        updateData[finalPosition === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
+        await db.collection('users').doc(finalParentId).update(updateData);
+        console.log(`✅ Parent ${finalParentId} mis à jour: ${finalPosition} = ${docRef.id}`);
+    }
+    
+    return {
+        success: true,
+        id: docRef.id,
+        codeMembre: codeMembre,
+        message: 'Membre ajouté avec succès'
+    };
+}
+
     </script>
 </body>
 </html>
