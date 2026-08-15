@@ -1,32 +1,46 @@
 // app.js - Fichier unique pour toute l'application
+// Version avec protection contre les re-déclarations
 
 // ============================================
 // 1. CONFIGURATION FIREBASE
 // ============================================
 
-const firebaseConfig = {
-    apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
-    authDomain: "mlm1-598b5.firebaseapp.com",
-    projectId: "mlm1-598b5",
-    storageBucket: "mlm1-598b5.firebasestorage.app",
-    messagingSenderId: "601982652419",
-    appId: "1:601982652419:web:a34ccee92f95950a63be36",
-    measurementId: "G-DLCVD2MRSC"
-};
+// Vérifier si Firebase est déjà initialisé
+if (!firebase.apps || !firebase.apps.length) {
+    const firebaseConfig = {
+        apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+        authDomain: "mlm1-598b5.firebaseapp.com",
+        projectId: "mlm1-598b5",
+        storageBucket: "mlm1-598b5.firebasestorage.app",
+        messagingSenderId: "601982652419",
+        appId: "1:601982652419:web:a34ccee92f95950a63be36",
+        measurementId: "G-DLCVD2MRSC"
+    };
 
-// Initialiser Firebase
-firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
+}
+
+// Récupérer les instances Firebase
 const auth = firebase.auth();
 const db = firebase.firestore();
 db.settings({ timestampsInSnapshots: true });
 
 // ============================================
-// 2. VARIABLES GLOBALES
+// 2. VARIABLES GLOBALES (avec protection)
 // ============================================
 
-let currentUser = null;
-let currentUserData = null;
-let allMembers = [];
+// Utiliser window pour éviter les re-déclarations
+if (typeof window._appInitialized === 'undefined') {
+    window._appInitialized = true;
+    window.currentUser = null;
+    window.currentUserData = null;
+    window.allMembers = [];
+}
+
+// Alias pour faciliter l'accès
+const currentUser = window.currentUser;
+const currentUserData = window.currentUserData;
+const allMembers = window.allMembers;
 
 // ============================================
 // 3. CONFIGURATION DES MENUS
@@ -67,38 +81,35 @@ const menuConfig = {
 // 4. FONCTIONS D'AUTHENTIFICATION
 // ============================================
 
-// Vérifier si l'utilisateur est connecté
 async function checkAuth() {
     return new Promise((resolve) => {
         auth.onAuthStateChanged((user) => {
-            currentUser = user;
+            window.currentUser = user;
             resolve(user);
         });
     });
 }
 
-// Vérifier si l'utilisateur est admin
 async function isAdmin() {
-    if (!currentUser) return false;
+    if (!window.currentUser) return false;
     try {
-        const doc = await db.collection('users').doc(currentUser.uid).get();
+        const doc = await db.collection('users').doc(window.currentUser.uid).get();
         if (!doc.exists) return false;
-        currentUserData = doc.data();
-        return currentUserData.role === 'admin';
+        window.currentUserData = doc.data();
+        return window.currentUserData.role === 'admin';
     } catch (error) {
         console.error('Erreur vérification admin:', error);
         return false;
     }
 }
 
-// Charger les données de l'utilisateur connecté
 async function loadUserData() {
-    if (!currentUser) return null;
+    if (!window.currentUser) return null;
     try {
-        const doc = await db.collection('users').doc(currentUser.uid).get();
+        const doc = await db.collection('users').doc(window.currentUser.uid).get();
         if (doc.exists) {
-            currentUserData = doc.data();
-            return currentUserData;
+            window.currentUserData = doc.data();
+            return window.currentUserData;
         }
         return null;
     } catch (error) {
@@ -111,25 +122,23 @@ async function loadUserData() {
 // 5. FONCTIONS DE GESTION DES MEMBRES
 // ============================================
 
-// Charger tous les membres
 async function loadAllMembers() {
     try {
         const snapshot = await db.collection('users').get();
-        allMembers = [];
+        window.allMembers = [];
         snapshot.forEach(doc => {
-            allMembers.push({
+            window.allMembers.push({
                 id: doc.id,
                 ...doc.data()
             });
         });
-        return allMembers;
+        return window.allMembers;
     } catch (error) {
         console.error('Erreur chargement membres:', error);
         return [];
     }
 }
 
-// Générer un code membre unique
 async function generateMemberCode() {
     const counterRef = db.collection('counters').doc('memberCode');
     
@@ -157,7 +166,6 @@ async function generateMemberCode() {
     }
 }
 
-// Rechercher la première position disponible (BFS)
 async function findNextAvailablePosition(racineId) {
     if (!racineId) {
         return { parentId: null, position: null };
@@ -194,7 +202,6 @@ async function findNextAvailablePosition(racineId) {
     return { parentId: racineId, position: 'left' };
 }
 
-// Trouver la racine
 async function findRoot() {
     try {
         const racineQuery = await db.collection('users')
@@ -222,7 +229,6 @@ async function findRoot() {
     }
 }
 
-// Compter les descendants d'un membre
 async function countDescendants(memberId) {
     let count = 0;
     let leftCount = 0;
@@ -258,7 +264,6 @@ async function countDescendants(memberId) {
     return { total: count, left: leftCount, right: rightCount };
 }
 
-// Inscription d'un membre
 async function inscrireMembre(data) {
     const { email, password, nom, prenom, telephone, codeParrain } = data;
     
@@ -371,7 +376,6 @@ async function inscrireMembre(data) {
 // 6. FONCTIONS D'AFFICHAGE DU MENU
 // ============================================
 
-// Générer la sidebar
 function generateSidebar(role, currentPage) {
     const config = role === 'admin' ? menuConfig.admin : menuConfig.member;
     
@@ -430,7 +434,6 @@ function generateSidebar(role, currentPage) {
     return menuHTML;
 }
 
-// Générer la bottom nav
 function generateBottomNav(role, currentPage) {
     const config = role === 'admin' ? menuConfig.admin : menuConfig.member;
     
@@ -472,7 +475,6 @@ function generateBottomNav(role, currentPage) {
 // 7. FONCTIONS DE GESTION DES ACTIONS
 // ============================================
 
-// Gestion de la déconnexion
 function handleLogout(e) {
     e.preventDefault();
     if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
@@ -485,7 +487,6 @@ function handleLogout(e) {
     }
 }
 
-// Ouvrir le modal d'ajout
 function openAddModal(e) {
     e.preventDefault();
     const modal = document.getElementById('addMemberModal');
@@ -494,7 +495,6 @@ function openAddModal(e) {
     }
 }
 
-// Afficher une notification
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     if (!toast) return;
@@ -549,7 +549,6 @@ async function loadMenu() {
     if (role === 'admin') {
         const headerRight = document.querySelector('.flex.items-center.space-x-4');
         if (headerRight) {
-            // Supprimer l'ancien lien admin s'il existe
             const oldAdminLink = headerRight.querySelector('.admin-link');
             if (oldAdminLink) oldAdminLink.remove();
             
@@ -561,20 +560,15 @@ async function loadMenu() {
         }
     }
     
-    // Ajouter la classe pour la bottom nav
     document.body.classList.add('has-bottom-nav');
 }
 
 // ============================================
-// 9. INITIALISATION
+// 9. EXPOSER LES FONCTIONS GLOBALEMENT
 // ============================================
 
-// Exposer les fonctions globalement
 window.auth = auth;
 window.db = db;
-window.currentUser = currentUser;
-window.currentUserData = currentUserData;
-window.allMembers = allMembers;
 
 window.checkAuth = checkAuth;
 window.isAdmin = isAdmin;
@@ -590,7 +584,10 @@ window.handleLogout = handleLogout;
 window.openAddModal = openAddModal;
 window.showToast = showToast;
 
-// Charger le menu au chargement de la page
+// ============================================
+// 10. INITIALISATION
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
     const protectedPages = ['dashboard.html', 'arbre.html', 'profil.html', 'admin/dashboard.html', 'admin/membres.html', 'admin/statistiques.html'];
     const currentPage = window.location.pathname.split('/').pop();
