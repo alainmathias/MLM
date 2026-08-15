@@ -1,5 +1,5 @@
 // app.js - Fichier unique pour toute l'application
-// Version avec protection contre les re-déclarations
+// Version corrigée - Plus d'erreur "Assignment to constant variable"
 
 // ============================================
 // 1. CONFIGURATION FIREBASE
@@ -26,21 +26,16 @@ const db = firebase.firestore();
 db.settings({ timestampsInSnapshots: true });
 
 // ============================================
-// 2. VARIABLES GLOBALES (avec protection)
+// 2. VARIABLES GLOBALES (utiliser window)
 // ============================================
 
-// Utiliser window pour éviter les re-déclarations
+// Initialiser les variables sur window si elles n'existent pas
 if (typeof window._appInitialized === 'undefined') {
     window._appInitialized = true;
     window.currentUser = null;
     window.currentUserData = null;
     window.allMembers = [];
 }
-
-// Alias pour faciliter l'accès
-const currentUser = window.currentUser;
-const currentUserData = window.currentUserData;
-const allMembers = window.allMembers;
 
 // ============================================
 // 3. CONFIGURATION DES MENUS
@@ -81,7 +76,7 @@ const menuConfig = {
 // 4. FONCTIONS D'AUTHENTIFICATION
 // ============================================
 
-async function checkAuth() {
+function checkAuth() {
     return new Promise((resolve) => {
         auth.onAuthStateChanged((user) => {
             window.currentUser = user;
@@ -90,286 +85,320 @@ async function checkAuth() {
     });
 }
 
-async function isAdmin() {
-    if (!window.currentUser) return false;
-    try {
-        const doc = await db.collection('users').doc(window.currentUser.uid).get();
-        if (!doc.exists) return false;
-        window.currentUserData = doc.data();
-        return window.currentUserData.role === 'admin';
-    } catch (error) {
-        console.error('Erreur vérification admin:', error);
-        return false;
-    }
+function isAdmin() {
+    return new Promise(async (resolve) => {
+        if (!window.currentUser) {
+            resolve(false);
+            return;
+        }
+        try {
+            const doc = await db.collection('users').doc(window.currentUser.uid).get();
+            if (!doc.exists) {
+                resolve(false);
+                return;
+            }
+            window.currentUserData = doc.data();
+            resolve(window.currentUserData.role === 'admin');
+        } catch (error) {
+            console.error('Erreur vérification admin:', error);
+            resolve(false);
+        }
+    });
 }
 
-async function loadUserData() {
-    if (!window.currentUser) return null;
-    try {
-        const doc = await db.collection('users').doc(window.currentUser.uid).get();
-        if (doc.exists) {
-            window.currentUserData = doc.data();
-            return window.currentUserData;
+function loadUserData() {
+    return new Promise(async (resolve) => {
+        if (!window.currentUser) {
+            resolve(null);
+            return;
         }
-        return null;
-    } catch (error) {
-        console.error('Erreur chargement données utilisateur:', error);
-        return null;
-    }
+        try {
+            const doc = await db.collection('users').doc(window.currentUser.uid).get();
+            if (doc.exists) {
+                window.currentUserData = doc.data();
+                resolve(window.currentUserData);
+            } else {
+                resolve(null);
+            }
+        } catch (error) {
+            console.error('Erreur chargement données utilisateur:', error);
+            resolve(null);
+        }
+    });
 }
 
 // ============================================
 // 5. FONCTIONS DE GESTION DES MEMBRES
 // ============================================
 
-async function loadAllMembers() {
-    try {
-        const snapshot = await db.collection('users').get();
-        window.allMembers = [];
-        snapshot.forEach(doc => {
-            window.allMembers.push({
-                id: doc.id,
-                ...doc.data()
+function loadAllMembers() {
+    return new Promise(async (resolve) => {
+        try {
+            const snapshot = await db.collection('users').get();
+            window.allMembers = [];
+            snapshot.forEach(doc => {
+                window.allMembers.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
             });
-        });
-        return window.allMembers;
-    } catch (error) {
-        console.error('Erreur chargement membres:', error);
-        return [];
-    }
+            resolve(window.allMembers);
+        } catch (error) {
+            console.error('Erreur chargement membres:', error);
+            resolve([]);
+        }
+    });
 }
 
-async function generateMemberCode() {
-    const counterRef = db.collection('counters').doc('memberCode');
-    
-    try {
-        const result = await db.runTransaction(async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            
-            let currentNumber;
-            if (!counterDoc.exists) {
-                currentNumber = 1;
-                transaction.set(counterRef, { currentNumber });
-            } else {
-                currentNumber = counterDoc.data().currentNumber + 1;
-                transaction.update(counterRef, { currentNumber });
-            }
-            
-            return currentNumber;
-        });
-        
-        return `MB${String(result).padStart(6, '0')}`;
-    } catch (error) {
-        console.error('Erreur génération code:', error);
-        const random = Math.floor(Math.random() * 1000000);
-        return `MB${String(random).padStart(6, '0')}`;
-    }
-}
-
-async function findNextAvailablePosition(racineId) {
-    if (!racineId) {
-        return { parentId: null, position: null };
-    }
-    
-    const queue = [racineId];
-    const visited = new Set();
-    
-    while (queue.length > 0) {
-        const currentId = queue.shift();
-        if (visited.has(currentId)) continue;
-        visited.add(currentId);
+function generateMemberCode() {
+    return new Promise(async (resolve, reject) => {
+        const counterRef = db.collection('counters').doc('memberCode');
         
         try {
-            const currentDoc = await db.collection('users').doc(currentId).get();
-            if (!currentDoc.exists) continue;
-            
-            const currentData = currentDoc.data();
-            
-            if (!currentData.leftChildId) {
-                return { parentId: currentId, position: 'left' };
-            }
-            queue.push(currentData.leftChildId);
-            
-            if (!currentData.rightChildId) {
-                return { parentId: currentId, position: 'right' };
-            }
-            queue.push(currentData.rightChildId);
-        } catch (error) {
-            console.error('Erreur BFS:', error);
-        }
-    }
-    
-    return { parentId: racineId, position: 'left' };
-}
-
-async function findRoot() {
-    try {
-        const racineQuery = await db.collection('users')
-            .where('position', '==', null)
-            .limit(1)
-            .get();
-        
-        if (!racineQuery.empty) {
-            return racineQuery.docs[0].id;
-        }
-        
-        const firstUser = await db.collection('users')
-            .orderBy('dateInscription')
-            .limit(1)
-            .get();
-        
-        if (!firstUser.empty) {
-            return firstUser.docs[0].id;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('Erreur recherche racine:', error);
-        return null;
-    }
-}
-
-async function countDescendants(memberId) {
-    let count = 0;
-    let leftCount = 0;
-    let rightCount = 0;
-    const queue = [memberId];
-    const visited = new Set();
-    
-    while (queue.length > 0) {
-        const currentId = queue.shift();
-        if (visited.has(currentId)) continue;
-        visited.add(currentId);
-        
-        try {
-            const doc = await db.collection('users').doc(currentId).get();
-            if (!doc.exists) continue;
-            
-            const data = doc.data();
-            if (data.leftChildId) {
-                count++;
-                leftCount++;
-                queue.push(data.leftChildId);
-            }
-            if (data.rightChildId) {
-                count++;
-                rightCount++;
-                queue.push(data.rightChildId);
-            }
-        } catch (error) {
-            console.error('Erreur comptage:', error);
-        }
-    }
-    
-    return { total: count, left: leftCount, right: rightCount };
-}
-
-async function inscrireMembre(data) {
-    const { email, password, nom, prenom, telephone, codeParrain } = data;
-    
-    if (!email || !password || !nom || !prenom || !telephone) {
-        throw new Error('Tous les champs sont obligatoires');
-    }
-    
-    const usersSnapshot = await db.collection('users').limit(1).get();
-    const isFirstUser = usersSnapshot.empty;
-    
-    let parrainDoc = null;
-    
-    if (!isFirstUser) {
-        if (!codeParrain) {
-            throw new Error('Code parrain obligatoire');
-        }
-        
-        const parrainQuery = await db.collection('users')
-            .where('codeMembre', '==', codeParrain)
-            .limit(1)
-            .get();
-        
-        if (parrainQuery.empty) {
-            throw new Error('Code parrain inexistant');
-        }
-        
-        parrainDoc = parrainQuery.docs[0];
-    }
-    
-    try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-        
-        await user.updateProfile({
-            displayName: `${prenom} ${nom}`
-        });
-        
-        const codeMembre = await generateMemberCode();
-        
-        let parentId = null;
-        let position = null;
-        let parrainId = null;
-        
-        if (!isFirstUser) {
-            const rootId = await findRoot();
-            if (rootId) {
-                const positionInfo = await findNextAvailablePosition(rootId);
-                parentId = positionInfo.parentId;
-                position = positionInfo.position;
-                parrainId = parrainDoc.id;
-            }
-        }
-        
-        const userData = {
-            uid: user.uid,
-            codeMembre: codeMembre,
-            nom: nom,
-            prenom: prenom,
-            telephone: telephone,
-            email: email,
-            codeParrain: codeParrain || null,
-            parrainId: parrainId,
-            parentId: parentId,
-            position: position,
-            leftChildId: null,
-            rightChildId: null,
-            dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
-            statut: 'actif',
-            role: isFirstUser ? 'admin' : 'member',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        await db.runTransaction(async (transaction) => {
-            transaction.set(db.collection('users').doc(user.uid), userData);
-            
-            if (parentId) {
-                const parentRef = db.collection('users').doc(parentId);
-                const updateData = {};
-                if (position === 'left') {
-                    updateData.leftChildId = user.uid;
-                } else if (position === 'right') {
-                    updateData.rightChildId = user.uid;
+            const result = await db.runTransaction(async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                
+                let currentNumber;
+                if (!counterDoc.exists) {
+                    currentNumber = 1;
+                    transaction.set(counterRef, { currentNumber });
+                } else {
+                    currentNumber = counterDoc.data().currentNumber + 1;
+                    transaction.update(counterRef, { currentNumber });
                 }
-                transaction.update(parentRef, updateData);
-            }
-        });
-        
-        return {
-            success: true,
-            uid: user.uid,
-            codeMembre: codeMembre
-        };
-        
-    } catch (authError) {
-        console.error('Erreur Auth:', authError);
-        if (authError.code === 'auth/email-already-in-use') {
-            throw new Error('Cet email est déjà utilisé');
-        } else if (authError.code === 'auth/weak-password') {
-            throw new Error('Mot de passe trop faible (minimum 8 caractères)');
-        } else if (authError.code === 'auth/invalid-email') {
-            throw new Error('Email invalide');
-        } else {
-            throw new Error('Erreur lors de la création du compte: ' + authError.message);
+                
+                return currentNumber;
+            });
+            
+            resolve(`MB${String(result).padStart(6, '0')}`);
+        } catch (error) {
+            console.error('Erreur génération code:', error);
+            const random = Math.floor(Math.random() * 1000000);
+            resolve(`MB${String(random).padStart(6, '0')}`);
         }
-    }
+    });
+}
+
+function findNextAvailablePosition(racineId) {
+    return new Promise(async (resolve) => {
+        if (!racineId) {
+            resolve({ parentId: null, position: null });
+            return;
+        }
+        
+        const queue = [racineId];
+        const visited = new Set();
+        
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            if (visited.has(currentId)) continue;
+            visited.add(currentId);
+            
+            try {
+                const currentDoc = await db.collection('users').doc(currentId).get();
+                if (!currentDoc.exists) continue;
+                
+                const currentData = currentDoc.data();
+                
+                if (!currentData.leftChildId) {
+                    resolve({ parentId: currentId, position: 'left' });
+                    return;
+                }
+                queue.push(currentData.leftChildId);
+                
+                if (!currentData.rightChildId) {
+                    resolve({ parentId: currentId, position: 'right' });
+                    return;
+                }
+                queue.push(currentData.rightChildId);
+            } catch (error) {
+                console.error('Erreur BFS:', error);
+            }
+        }
+        
+        resolve({ parentId: racineId, position: 'left' });
+    });
+}
+
+function findRoot() {
+    return new Promise(async (resolve) => {
+        try {
+            const racineQuery = await db.collection('users')
+                .where('position', '==', null)
+                .limit(1)
+                .get();
+            
+            if (!racineQuery.empty) {
+                resolve(racineQuery.docs[0].id);
+                return;
+            }
+            
+            const firstUser = await db.collection('users')
+                .orderBy('dateInscription')
+                .limit(1)
+                .get();
+            
+            if (!firstUser.empty) {
+                resolve(firstUser.docs[0].id);
+                return;
+            }
+            
+            resolve(null);
+        } catch (error) {
+            console.error('Erreur recherche racine:', error);
+            resolve(null);
+        }
+    });
+}
+
+function countDescendants(memberId) {
+    return new Promise(async (resolve) => {
+        let count = 0;
+        let leftCount = 0;
+        let rightCount = 0;
+        const queue = [memberId];
+        const visited = new Set();
+        
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            if (visited.has(currentId)) continue;
+            visited.add(currentId);
+            
+            try {
+                const doc = await db.collection('users').doc(currentId).get();
+                if (!doc.exists) continue;
+                
+                const data = doc.data();
+                if (data.leftChildId) {
+                    count++;
+                    leftCount++;
+                    queue.push(data.leftChildId);
+                }
+                if (data.rightChildId) {
+                    count++;
+                    rightCount++;
+                    queue.push(data.rightChildId);
+                }
+            } catch (error) {
+                console.error('Erreur comptage:', error);
+            }
+        }
+        
+        resolve({ total: count, left: leftCount, right: rightCount });
+    });
+}
+
+function inscrireMembre(data) {
+    return new Promise(async (resolve, reject) => {
+        const { email, password, nom, prenom, telephone, codeParrain } = data;
+        
+        if (!email || !password || !nom || !prenom || !telephone) {
+            reject(new Error('Tous les champs sont obligatoires'));
+            return;
+        }
+        
+        try {
+            const usersSnapshot = await db.collection('users').limit(1).get();
+            const isFirstUser = usersSnapshot.empty;
+            
+            let parrainDoc = null;
+            
+            if (!isFirstUser) {
+                if (!codeParrain) {
+                    reject(new Error('Code parrain obligatoire'));
+                    return;
+                }
+                
+                const parrainQuery = await db.collection('users')
+                    .where('codeMembre', '==', codeParrain)
+                    .limit(1)
+                    .get();
+                
+                if (parrainQuery.empty) {
+                    reject(new Error('Code parrain inexistant'));
+                    return;
+                }
+                
+                parrainDoc = parrainQuery.docs[0];
+            }
+            
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            
+            await user.updateProfile({
+                displayName: `${prenom} ${nom}`
+            });
+            
+            const codeMembre = await generateMemberCode();
+            
+            let parentId = null;
+            let position = null;
+            let parrainId = null;
+            
+            if (!isFirstUser) {
+                const rootId = await findRoot();
+                if (rootId) {
+                    const positionInfo = await findNextAvailablePosition(rootId);
+                    parentId = positionInfo.parentId;
+                    position = positionInfo.position;
+                    parrainId = parrainDoc.id;
+                }
+            }
+            
+            const userData = {
+                uid: user.uid,
+                codeMembre: codeMembre,
+                nom: nom,
+                prenom: prenom,
+                telephone: telephone,
+                email: email,
+                codeParrain: codeParrain || null,
+                parrainId: parrainId,
+                parentId: parentId,
+                position: position,
+                leftChildId: null,
+                rightChildId: null,
+                dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                statut: 'actif',
+                role: isFirstUser ? 'admin' : 'member',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            await db.runTransaction(async (transaction) => {
+                transaction.set(db.collection('users').doc(user.uid), userData);
+                
+                if (parentId) {
+                    const parentRef = db.collection('users').doc(parentId);
+                    const updateData = {};
+                    if (position === 'left') {
+                        updateData.leftChildId = user.uid;
+                    } else if (position === 'right') {
+                        updateData.rightChildId = user.uid;
+                    }
+                    transaction.update(parentRef, updateData);
+                }
+            });
+            
+            resolve({
+                success: true,
+                uid: user.uid,
+                codeMembre: codeMembre
+            });
+            
+        } catch (authError) {
+            console.error('Erreur Auth:', authError);
+            if (authError.code === 'auth/email-already-in-use') {
+                reject(new Error('Cet email est déjà utilisé'));
+            } else if (authError.code === 'auth/weak-password') {
+                reject(new Error('Mot de passe trop faible (minimum 8 caractères)'));
+            } else if (authError.code === 'auth/invalid-email') {
+                reject(new Error('Email invalide'));
+            } else {
+                reject(new Error('Erreur lors de la création du compte: ' + authError.message));
+            }
+        }
+    });
 }
 
 // ============================================
@@ -510,57 +539,66 @@ function showToast(message, type = 'success') {
 // 8. CHARGEMENT DU MENU
 // ============================================
 
-async function loadMenu() {
-    const user = await checkAuth();
-    if (!user) return;
-    
-    const userData = await loadUserData();
-    if (!userData) return;
-    
-    const role = userData.role === 'admin' ? 'admin' : 'member';
-    const currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
-    
-    // Générer la sidebar
-    const sidebarHTML = generateSidebar(role, currentPage);
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.innerHTML = sidebarHTML;
-    }
-    
-    // Générer la bottom nav
-    const bottomNavHTML = generateBottomNav(role, currentPage);
-    const bottomNavContainer = document.getElementById('bottomNavContainer');
-    if (bottomNavContainer) {
-        bottomNavContainer.innerHTML = bottomNavHTML;
-    }
-    
-    // Mettre à jour le header
-    const userNameEl = document.getElementById('userName');
-    const userInitialEl = document.getElementById('userInitial');
-    
-    if (userNameEl) {
-        userNameEl.textContent = `${userData.prenom} ${userData.nom}`;
-    }
-    if (userInitialEl) {
-        userInitialEl.textContent = userData.prenom.charAt(0).toUpperCase();
-    }
-    
-    // Ajouter le lien admin dans le header
-    if (role === 'admin') {
-        const headerRight = document.querySelector('.flex.items-center.space-x-4');
-        if (headerRight) {
-            const oldAdminLink = headerRight.querySelector('.admin-link');
-            if (oldAdminLink) oldAdminLink.remove();
-            
-            const adminLink = document.createElement('a');
-            adminLink.href = 'admin/dashboard.html';
-            adminLink.className = 'admin-link text-sm text-purple-600 hover:text-purple-700 font-medium';
-            adminLink.innerHTML = '<i class="fas fa-crown mr-1"></i> Admin';
-            headerRight.insertBefore(adminLink, headerRight.firstChild);
+function loadMenu() {
+    return new Promise(async (resolve) => {
+        const user = await checkAuth();
+        if (!user) {
+            resolve();
+            return;
         }
-    }
-    
-    document.body.classList.add('has-bottom-nav');
+        
+        const userData = await loadUserData();
+        if (!userData) {
+            resolve();
+            return;
+        }
+        
+        const role = userData.role === 'admin' ? 'admin' : 'member';
+        const currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
+        
+        // Générer la sidebar
+        const sidebarHTML = generateSidebar(role, currentPage);
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.innerHTML = sidebarHTML;
+        }
+        
+        // Générer la bottom nav
+        const bottomNavHTML = generateBottomNav(role, currentPage);
+        const bottomNavContainer = document.getElementById('bottomNavContainer');
+        if (bottomNavContainer) {
+            bottomNavContainer.innerHTML = bottomNavHTML;
+        }
+        
+        // Mettre à jour le header
+        const userNameEl = document.getElementById('userName');
+        const userInitialEl = document.getElementById('userInitial');
+        
+        if (userNameEl) {
+            userNameEl.textContent = `${userData.prenom} ${userData.nom}`;
+        }
+        if (userInitialEl) {
+            userInitialEl.textContent = userData.prenom.charAt(0).toUpperCase();
+        }
+        
+        // Ajouter le lien admin dans le header
+        if (role === 'admin') {
+            const headerRight = document.querySelector('.flex.items-center.space-x-4');
+            if (headerRight) {
+                const oldAdminLink = headerRight.querySelector('.admin-link');
+                if (oldAdminLink) oldAdminLink.remove();
+                
+                const adminLink = document.createElement('a');
+                adminLink.href = 'admin/dashboard.html';
+                adminLink.className = 'admin-link text-sm text-purple-600 hover:text-purple-700 font-medium';
+                adminLink.innerHTML = '<i class="fas fa-crown mr-1"></i> Admin';
+                headerRight.insertBefore(adminLink, headerRight.firstChild);
+            }
+        }
+        
+        document.body.classList.add('has-bottom-nav');
+        resolve();
+    });
 }
 
 // ============================================
@@ -596,3 +634,5 @@ document.addEventListener('DOMContentLoaded', function() {
         loadMenu();
     }
 });
+
+console.log('✅ app.js chargé avec succès !');
