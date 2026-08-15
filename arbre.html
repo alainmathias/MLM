@@ -3,37 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Arbre - CommunityTree</title>
+    <title>Arbre Complet - CommunityTree</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
-<!-- Chargement de la configuration partagée -->
-<script src="config.js"></script>
+
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .sidebar-link {
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .sidebar-link:hover {
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
-        }
-        .sidebar-link.active {
-            background: rgba(102, 126, 234, 0.15);
-            color: #667eea;
-            border-right: 3px solid #667eea;
-        }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .tree-container {
             overflow: auto;
             padding: 20px;
-            min-height: 500px;
+            min-height: 600px;
             background: #f8fafc;
             border-radius: 12px;
             position: relative;
@@ -50,11 +32,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            cursor: pointer;
+            cursor: default;
             transition: all 0.3s;
         }
         .tree-node:hover {
             transform: scale(1.05);
+            z-index: 10;
         }
         .tree-node-content {
             background: white;
@@ -67,13 +50,10 @@
             transition: all 0.3s;
             position: relative;
         }
-        .tree-node-content.current-user {
+        .tree-node-content.root {
             border-color: #667eea;
             background: #667eea;
             color: white;
-        }
-        .tree-node-content.current-user .text-gray-500 {
-            color: #e5e7eb;
         }
         .tree-node-content .node-name {
             font-weight: 600;
@@ -83,8 +63,10 @@
             font-size: 11px;
             color: #6b7280;
         }
-        .tree-node-content.current-user .node-code {
-            color: #e5e7eb;
+        .tree-node-content.root .node-code { color: #e5e7eb; }
+        .tree-node-content.suspended {
+            border-color: #ef4444;
+            background: #fee2e2;
         }
         .tree-children {
             display: flex;
@@ -116,22 +98,11 @@
             height: 10px;
             background: #9CA3AF;
         }
-        .tree-child:first-child::before {
-            left: 50%;
-        }
-        .tree-child:last-child::before {
-            right: 50%;
-        }
-        .tree-child:only-child::before {
-            left: 50%;
-        }
-        .tree-connector {
-            position: absolute;
-            top: -10px;
-            width: 100%;
-            height: 2px;
-            background: #9CA3AF;
-        }
+        .tree-child:first-child::before { left: 50%; }
+        .tree-child:last-child::before { right: 50%; }
+        .tree-child:only-child::before { left: 50%; }
+        .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .zoom-controls {
             position: sticky;
             bottom: 20px;
@@ -140,178 +111,166 @@
             gap: 10px;
             z-index: 10;
         }
-        .member-popup {
+        .toast {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 100;
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 999;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
             max-width: 400px;
-            width: 90%;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
         }
-        .popup-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 99;
-        }
-        .hidden-popup {
-            display: none;
-        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-info { background: #2563eb; }
         @media (max-width: 768px) {
-            .tree-children {
-                gap: 20px;
-                flex-wrap: wrap;
-            }
-            .tree-node-content {
-                min-width: 80px;
-                padding: 8px 12px;
-            }
-            .tree-node-content .node-name {
-                font-size: 12px;
-            }
-            .tree-node-content .node-code {
-                font-size: 10px;
-            }
+            .tree-children { gap: 20px; flex-wrap: wrap; }
+            .tree-node-content { min-width: 80px; padding: 8px 12px; }
+            .tree-node-content .node-name { font-size: 12px; }
+            .tree-node-content .node-code { font-size: 10px; }
         }
     </style>
 </head>
 <body>
-    
-    <!-- Sidebar -->
-    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40">
-        <div class="flex flex-col h-full">
-            <div class="flex items-center justify-center h-16 border-b">
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
+        <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
+            <div class="flex items-center">
                 <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
                 <span class="text-xl font-bold text-gray-800">CommunityTree</span>
             </div>
-            
-            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                <a href="dashboard.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
-                    <i class="fas fa-home w-5 h-5 mr-3"></i>
-                    Dashboard
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-500" id="totalMembres">0 membres</span>
+                <a href="index.html" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-home"></i>
                 </a>
-                <a href="arbre.html" class="sidebar-link active flex items-center px-4 py-3 rounded-lg text-gray-700">
-                    <i class="fas fa-sitemap w-5 h-5 mr-3"></i>
-                    Mon Arbre
-                </a>
-                <a href="profil.html" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-gray-700">
-                    <i class="fas fa-user w-5 h-5 mr-3"></i>
-                    Mon Profil
-                </a>
-                <a href="#" id="logoutBtn" class="sidebar-link flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 mt-8">
-                    <i class="fas fa-sign-out-alt w-5 h-5 mr-3"></i>
-                    Déconnexion
-                </a>
-            </nav>
+            </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Main Content -->
-    <div class="md:ml-64">
-        <!-- Top Bar -->
-        <header class="bg-white shadow-sm fixed top-0 right-0 left-0 md:left-64 z-30">
-            <div class="flex items-center justify-between px-4 py-3">
-                <button id="sidebarToggle" class="md:hidden text-gray-600 hover:text-gray-800">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-600" id="userName">Chargement...</span>
-                    <div class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-semibold text-sm" id="userInitial">
-                        U
-                    </div>
+    <main class="pt-20 px-4 pb-8 max-w-7xl mx-auto">
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card">
+                <p class="text-sm text-gray-500">Total</p>
+                <p class="text-xl font-bold text-gray-800" id="statTotal">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card">
+                <p class="text-sm text-gray-500">Niveaux</p>
+                <p class="text-xl font-bold text-gray-800" id="statNiveaux">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card">
+                <p class="text-sm text-gray-500">Feuilles</p>
+                <p class="text-xl font-bold text-gray-800" id="statFeuilles">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card">
+                <p class="text-sm text-gray-500">Racine</p>
+                <p class="text-xl font-bold text-gray-800 truncate" id="statRacine">-</p>
+            </div>
+        </div>
+
+        <!-- Tree -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                <h2 class="text-lg font-bold text-gray-800">
+                    <i class="fas fa-sitemap text-blue-600 mr-2"></i> Arbre Complet
+                </h2>
+                <div class="flex flex-wrap gap-2">
+                    <button id="zoomIn" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button id="zoomOut" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button id="resetZoom" class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                        <i class="fas fa-home"></i>
+                    </button>
+                    <button id="refreshTree" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
             </div>
-        </header>
 
-        <!-- Page Content -->
-        <main class="pt-20 px-4 pb-8">
-            <div class="bg-white rounded-xl shadow-sm p-4">
-                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">Mon Arbre</h2>
-                    <div class="flex flex-wrap gap-2">
-                        <button id="zoomIn" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button id="zoomOut" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <button id="resetZoom" class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
-                            <i class="fas fa-home"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="tree-container" id="treeContainer">
-                    <div class="tree-wrapper" id="treeWrapper">
-                        <div id="treeContent" class="flex flex-col items-center">
-                            <div class="text-gray-500 text-center py-10">
-                                <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
-                                <p>Chargement de l'arbre...</p>
-                            </div>
+            <div class="tree-container" id="treeContainer">
+                <div class="tree-wrapper" id="treeWrapper">
+                    <div id="treeContent" class="flex flex-col items-center">
+                        <div class="text-gray-500 text-center py-10">
+                            <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                            <p>Chargement de l'arbre...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
 
-    <!-- Member Popup -->
-    <div id="memberPopup" class="hidden-popup">
-        <div class="popup-overlay" onclick="closePopup()"></div>
-        <div class="member-popup">
-            <button onclick="closePopup()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600" style="position: absolute; top: 16px; right: 16px;">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-            <div class="text-center">
-                <div class="w-16 h-16 mx-auto rounded-full gradient-bg flex items-center justify-center text-white text-xl font-bold" id="popupInitial">
-                    U
-                </div>
-                <h3 class="mt-4 text-xl font-bold text-gray-800" id="popupName">---</h3>
-                <p class="text-sm text-gray-500" id="popupCode">---</p>
+        <!-- Légende -->
+        <div class="mt-4 flex flex-wrap gap-4 justify-center text-sm text-gray-600">
+            <div class="flex items-center">
+                <span class="w-4 h-4 bg-blue-600 rounded-full mr-2"></span>
+                Racine
             </div>
-            <div class="mt-4 space-y-2">
-                <div class="flex justify-between py-2 border-b">
-                    <span class="text-gray-600">Position</span>
-                    <span class="font-medium" id="popupPosition">---</span>
-                </div>
-                <div class="flex justify-between py-2 border-b">
-                    <span class="text-gray-600">Parrain</span>
-                    <span class="font-medium" id="popupParrain">---</span>
-                </div>
-                <div class="flex justify-between py-2 border-b">
-                    <span class="text-gray-600">Descendants</span>
-                    <span class="font-medium" id="popupDescendants">0</span>
-                </div>
+            <div class="flex items-center">
+                <span class="w-4 h-4 bg-white border-2 border-gray-300 rounded-full mr-2"></span>
+                Membre actif
+            </div>
+            <div class="flex items-center">
+                <span class="w-4 h-4 bg-red-100 border-2 border-red-400 rounded-full mr-2"></span>
+                Membre suspendu
+            </div>
+            <div class="flex items-center">
+                <span class="w-4 h-4 bg-gray-200 border-2 border-gray-300 rounded-full mr-2"></span>
+                Position libre
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        //let currentUser = null;
+        // ============================================
+        // TOAST
+        // ============================================
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast toast-info show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ============================================
+        // VARIABLES
+        // ============================================
+
         let usersMap = {};
         let scale = 1;
         const MIN_SCALE = 0.3;
         const MAX_SCALE = 2;
 
-        // Sidebar toggle
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('-translate-x-full');
-        });
+        // ============================================
+        // ZOOM
+        // ============================================
 
-        // Déconnexion
-        document.getElementById('logoutBtn').addEventListener('click', function(e) {
-            e.preventDefault();
-            auth.signOut().then(() => {
-                window.location.href = 'connexion.html';
-            });
-        });
-
-        // Zoom controls
         document.getElementById('zoomIn').addEventListener('click', function() {
             scale = Math.min(scale + 0.1, MAX_SCALE);
             updateZoom();
@@ -330,72 +289,27 @@
             document.getElementById('treeWrapper').style.transformOrigin = 'center top';
         }
 
-        // Popup functions
-        window.closePopup = function() {
-            document.getElementById('memberPopup').classList.add('hidden-popup');
-        };
+        // ============================================
+        // CONSTRUCTION DE L'ARBRE
+        // ============================================
 
-        function openPopup(memberId) {
-            const member = usersMap[memberId];
-            if (!member) return;
-
-            const popup = document.getElementById('memberPopup');
-            document.getElementById('popupInitial').textContent = member.prenom.charAt(0).toUpperCase();
-            document.getElementById('popupName').textContent = `${member.prenom} ${member.nom}`;
-            document.getElementById('popupCode').textContent = member.codeMembre;
-            
-            const positionMap = {
-                'left': 'Gauche',
-                'right': 'Droite',
-                null: 'Racine'
-            };
-            document.getElementById('popupPosition').textContent = positionMap[member.position] || '---';
-            
-            // Parrain
-            if (member.parrainId && usersMap[member.parrainId]) {
-                const parrain = usersMap[member.parrainId];
-                document.getElementById('popupParrain').textContent = `${parrain.prenom} ${parrain.nom}`;
-            } else {
-                document.getElementById('popupParrain').textContent = 'Aucun';
-            }
-
-            // Compter les descendants
-            let descendants = 0;
-            const queue = [memberId];
-            const visited = new Set();
-            while (queue.length > 0) {
-                const id = queue.shift();
-                if (visited.has(id)) continue;
-                visited.add(id);
-                const data = usersMap[id];
-                if (data.leftChildId) {
-                    descendants++;
-                    queue.push(data.leftChildId);
-                }
-                if (data.rightChildId) {
-                    descendants++;
-                    queue.push(data.rightChildId);
-                }
-            }
-            document.getElementById('popupDescendants').textContent = descendants;
-
-            popup.classList.remove('hidden-popup');
-        }
-
-        // Construire l'arbre HTML
-        function buildTreeHTML(nodeId, isCurrentUser = false) {
+        function buildTreeHTML(nodeId, isRoot = false) {
             const node = usersMap[nodeId];
             if (!node) return null;
 
-            const isCurrent = nodeId === currentUser.uid;
-            const nodeClass = isCurrent ? 'tree-node-content current-user' : 'tree-node-content';
+            let nodeClass = 'tree-node-content';
+            if (isRoot) nodeClass += ' root';
+            if (node.statut === 'suspendu') nodeClass += ' suspended';
+
+            const positionLabel = node.position === 'left' ? '⬅' : node.position === 'right' ? '➡' : '';
             
             let html = `
-                <div class="tree-node" onclick="openPopup('${nodeId}')">
+                <div class="tree-node">
                     <div class="${nodeClass}">
-                        <div class="node-name">${node.prenom} ${node.nom}</div>
-                        <div class="node-code">${node.codeMembre}</div>
-                        ${node.position ? `<div style="font-size:10px;color:${isCurrent ? '#e5e7eb' : '#9ca3af'}">${node.position === 'left' ? '⬅' : '➡'}</div>` : ''}
+                        <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
+                        <div class="node-code">${node.codeMembre || '---'}</div>
+                        ${positionLabel ? `<div style="font-size:10px;color:${isRoot ? '#e5e7eb' : '#9ca3af'}">${positionLabel}</div>` : ''}
+                        ${node.statut === 'suspendu' ? `<div style="font-size:9px;color:#dc2626;">⛔ Suspendu</div>` : ''}
                     </div>
             `;
 
@@ -408,13 +322,13 @@
                 if (hasLeft) {
                     html += `<div class="tree-child">${buildTreeHTML(node.leftChildId)}</div>`;
                 } else {
-                    html += `<div class="tree-child"><div class="tree-node-content" style="opacity:0.3;border-style:dashed;"><div class="node-name" style="color:#9ca3af;">Vide</div></div></div>`;
+                    html += `<div class="tree-child"><div class="tree-node-content" style="opacity:0.3;border-style:dashed;"><div class="node-name" style="color:#9ca3af;">Libre</div></div></div>`;
                 }
                 
                 if (hasRight) {
                     html += `<div class="tree-child">${buildTreeHTML(node.rightChildId)}</div>`;
                 } else {
-                    html += `<div class="tree-child"><div class="tree-node-content" style="opacity:0.3;border-style:dashed;"><div class="node-name" style="color:#9ca3af;">Vide</div></div></div>`;
+                    html += `<div class="tree-child"><div class="tree-node-content" style="opacity:0.3;border-style:dashed;"><div class="node-name" style="color:#9ca3af;">Libre</div></div></div>`;
                 }
                 
                 html += `</div>`;
@@ -424,67 +338,121 @@
             return html;
         }
 
-        // Charger l'arbre
-        async function loadTree(user) {
-            try {
-                currentUser = user;
+        // ============================================
+        // STATISTIQUES
+        // ============================================
+
+        function calculateStats() {
+            const total = Object.keys(usersMap).length;
+            
+            let rootId = null;
+            for (const [id, data] of Object.entries(usersMap)) {
+                if (!data.position) { rootId = id; break; }
+            }
+            
+            let levels = {};
+            let feuilles = 0;
+            
+            if (rootId) {
+                const queue = [{ id: rootId, level: 0 }];
+                const visited = new Set();
                 
-                // Récupérer tous les utilisateurs
+                while (queue.length > 0) {
+                    const { id, level } = queue.shift();
+                    if (visited.has(id)) continue;
+                    visited.add(id);
+                    
+                    if (!levels[level]) levels[level] = 0;
+                    levels[level]++;
+                    
+                    const node = usersMap[id];
+                    let hasChildren = false;
+                    
+                    if (node.leftChildId && usersMap[node.leftChildId]) {
+                        hasChildren = true;
+                        queue.push({ id: node.leftChildId, level: level + 1 });
+                    }
+                    if (node.rightChildId && usersMap[node.rightChildId]) {
+                        hasChildren = true;
+                        queue.push({ id: node.rightChildId, level: level + 1 });
+                    }
+                    
+                    if (!hasChildren) feuilles++;
+                }
+            }
+            
+            const niveaux = Object.keys(levels).length;
+            const racineNom = rootId && usersMap[rootId] ? 
+                `${usersMap[rootId].prenom} ${usersMap[rootId].nom}` : '-';
+            
+            return { total, niveaux, feuilles, racineNom };
+        }
+
+        // ============================================
+        // CHARGEMENT
+        // ============================================
+
+        async function loadTree() {
+            try {
                 const snapshot = await db.collection('users').get();
                 usersMap = {};
                 snapshot.forEach(doc => {
                     usersMap[doc.id] = doc.data();
                 });
 
-                // Trouver la racine
+                const stats = calculateStats();
+                document.getElementById('statTotal').textContent = stats.total;
+                document.getElementById('statNiveaux').textContent = stats.niveaux;
+                document.getElementById('statFeuilles').textContent = stats.feuilles;
+                document.getElementById('statRacine').textContent = stats.racineNom;
+                document.getElementById('totalMembres').textContent = stats.total + ' membres';
+
                 let rootId = null;
                 for (const [id, data] of Object.entries(usersMap)) {
-                    if (!data.position) {
-                        rootId = id;
-                        break;
-                    }
+                    if (!data.position) { rootId = id; break; }
                 }
 
-                // Mettre à jour l'interface utilisateur
-                const userData = usersMap[user.uid];
-                if (userData) {
-                    document.getElementById('userName').textContent = `${userData.prenom} ${userData.nom}`;
-                    document.getElementById('userInitial').textContent = userData.prenom.charAt(0).toUpperCase();
-                }
-
-                // Afficher l'arbre
                 const container = document.getElementById('treeContent');
                 if (rootId && usersMap[rootId]) {
-                    const treeHTML = buildTreeHTML(rootId);
-                    container.innerHTML = treeHTML;
+                    container.innerHTML = buildTreeHTML(rootId, true);
                 } else {
                     container.innerHTML = `
                         <div class="text-gray-500 text-center py-10">
                             <i class="fas fa-tree text-4xl mb-2"></i>
                             <p>Aucun arbre disponible</p>
+                            <p class="text-sm mt-2">Ajoutez votre premier membre depuis l'admin</p>
                         </div>
                     `;
                 }
 
             } catch (error) {
-                console.error('Erreur chargement arbre:', error);
+                console.error('Erreur chargement:', error);
                 document.getElementById('treeContent').innerHTML = `
                     <div class="text-red-500 text-center py-10">
                         <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
-                        <p>Erreur lors du chargement de l'arbre</p>
+                        <p>Erreur lors du chargement</p>
+                        <button onclick="loadTree()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">
+                            Réessayer
+                        </button>
                     </div>
                 `;
             }
         }
 
-        // Vérifier l'authentification
-        auth.onAuthStateChanged((user) => {
-            if (!user) {
-                window.location.href = 'connexion.html';
-                return;
-            }
-            loadTree(user);
+        // ============================================
+        // RAFRAÎCHISSEMENT
+        // ============================================
+
+        document.getElementById('refreshTree').addEventListener('click', function() {
+            showToast('🔄 Rafraîchissement...');
+            loadTree();
         });
+
+        // ============================================
+        // INITIALISATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', loadTree);
     </script>
 </body>
 </html>
