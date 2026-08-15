@@ -1,5 +1,4 @@
-// app.js - Fichier unique pour toute l'application
-// Version corrigée - Plus d'erreur "Assignment to constant variable"
+// app.js - Version avec gestion d'erreur IndexedDB
 
 // ============================================
 // 1. CONFIGURATION FIREBASE
@@ -26,19 +25,46 @@ const db = firebase.firestore();
 db.settings({ timestampsInSnapshots: true });
 
 // ============================================
-// 2. VARIABLES GLOBALES (utiliser window)
+// 2. GESTION DE LA PERSISTANCE AUTH
 // ============================================
 
-// Initialiser les variables sur window si elles n'existent pas
+// Configurer la persistance avec fallback
+async function setupAuthPersistence() {
+    try {
+        // Essayer avec localStorage d'abord (plus rapide)
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        console.log('✅ Persistance configurée: LOCAL');
+    } catch (error) {
+        console.warn('⚠️ Erreur persistance LOCAL, tentative SESSION:', error);
+        try {
+            await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+            console.log('✅ Persistance configurée: SESSION');
+        } catch (error2) {
+            console.warn('⚠️ Erreur persistance SESSION, tentative NONE:', error2);
+            try {
+                await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+                console.log('✅ Persistance configurée: NONE');
+            } catch (error3) {
+                console.error('❌ Toutes les tentatives de persistance ont échoué:', error3);
+            }
+        }
+    }
+}
+
+// ============================================
+// 3. VARIABLES GLOBALES
+// ============================================
+
 if (typeof window._appInitialized === 'undefined') {
     window._appInitialized = true;
     window.currentUser = null;
     window.currentUserData = null;
     window.allMembers = [];
+    window._authReady = false;
 }
 
 // ============================================
-// 3. CONFIGURATION DES MENUS
+// 4. CONFIGURATION DES MENUS
 // ============================================
 
 const menuConfig = {
@@ -73,36 +99,41 @@ const menuConfig = {
 };
 
 // ============================================
-// 4. FONCTIONS D'AUTHENTIFICATION
+// 5. FONCTIONS D'AUTHENTIFICATION (avec fallback)
 // ============================================
 
 function checkAuth() {
     return new Promise((resolve) => {
-        auth.onAuthStateChanged((user) => {
-            window.currentUser = user;
-            resolve(user);
-        });
-    });
-}
-
-function isAdmin() {
-    return new Promise(async (resolve) => {
-        if (!window.currentUser) {
-            resolve(false);
+        // Si l'authentification est déjà initialisée, résoudre immédiatement
+        if (window._authReady && window.currentUser !== undefined) {
+            resolve(window.currentUser);
             return;
         }
-        try {
-            const doc = await db.collection('users').doc(window.currentUser.uid).get();
-            if (!doc.exists) {
-                resolve(false);
-                return;
+
+        // Sinon, attendre le changement d'état
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            window.currentUser = user;
+            window._authReady = true;
+            resolve(user);
+            unsubscribe();
+        }, (error) => {
+            console.error('Erreur auth:', error);
+            window._authReady = true;
+            resolve(null);
+            unsubscribe();
+        });
+
+        // Timeout pour éviter d'attendre trop longtemps
+        setTimeout(() => {
+            if (!window._authReady) {
+                console.warn('Timeout checkAuth, tentative de récupération directe');
+                const user = auth.currentUser;
+                window.currentUser = user;
+                window._authReady = true;
+                resolve(user);
+                unsubscribe();
             }
-            window.currentUserData = doc.data();
-            resolve(window.currentUserData.role === 'admin');
-        } catch (error) {
-            console.error('Erreur vérification admin:', error);
-            resolve(false);
-        }
+        }, 3000);
     });
 }
 
@@ -112,6 +143,7 @@ function loadUserData() {
             resolve(null);
             return;
         }
+        
         try {
             const doc = await db.collection('users').doc(window.currentUser.uid).get();
             if (doc.exists) {
@@ -128,7 +160,7 @@ function loadUserData() {
 }
 
 // ============================================
-// 5. FONCTIONS DE GESTION DES MEMBRES
+// 6. FONCTIONS DE GESTION DES MEMBRES (inchangées)
 // ============================================
 
 function loadAllMembers() {
@@ -151,7 +183,7 @@ function loadAllMembers() {
 }
 
 function generateMemberCode() {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
         const counterRef = db.collection('counters').doc('memberCode');
         
         try {
@@ -402,7 +434,7 @@ function inscrireMembre(data) {
 }
 
 // ============================================
-// 6. FONCTIONS D'AFFICHAGE DU MENU
+// 7. FONCTIONS D'AFFICHAGE DU MENU
 // ============================================
 
 function generateSidebar(role, currentPage) {
@@ -501,13 +533,17 @@ function generateBottomNav(role, currentPage) {
 }
 
 // ============================================
-// 7. FONCTIONS DE GESTION DES ACTIONS
+// 8. FONCTIONS DE GESTION DES ACTIONS
 // ============================================
 
 function handleLogout(e) {
     e.preventDefault();
     if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
         auth.signOut().then(() => {
+            // Nettoyer les variables
+            window.currentUser = null;
+            window.currentUserData = null;
+            window._authReady = false;
             window.location.href = 'connexion.html';
         }).catch((error) => {
             console.error('Erreur déconnexion:', error);
@@ -536,20 +572,25 @@ function showToast(message, type = 'success') {
 }
 
 // ============================================
-// 8. CHARGEMENT DU MENU
+// 9. CHARGEMENT DU MENU
 // ============================================
 
-function loadMenu() {
-    return new Promise(async (resolve) => {
+async function loadMenu() {
+    try {
+        // Configurer la persistance
+        await setupAuthPersistence();
+        
+        // Vérifier l'authentification
         const user = await checkAuth();
         if (!user) {
-            resolve();
+            console.log('Utilisateur non connecté');
             return;
         }
         
+        // Charger les données utilisateur
         const userData = await loadUserData();
         if (!userData) {
-            resolve();
+            console.error('Données utilisateur non trouvées');
             return;
         }
         
@@ -581,7 +622,7 @@ function loadMenu() {
             userInitialEl.textContent = userData.prenom.charAt(0).toUpperCase();
         }
         
-        // Ajouter le lien admin dans le header
+        // Ajouter le lien admin
         if (role === 'admin') {
             const headerRight = document.querySelector('.flex.items-center.space-x-4');
             if (headerRight) {
@@ -597,19 +638,20 @@ function loadMenu() {
         }
         
         document.body.classList.add('has-bottom-nav');
-        resolve();
-    });
+        
+    } catch (error) {
+        console.error('Erreur loadMenu:', error);
+    }
 }
 
 // ============================================
-// 9. EXPOSER LES FONCTIONS GLOBALEMENT
+// 10. EXPOSER LES FONCTIONS GLOBALEMENT
 // ============================================
 
 window.auth = auth;
 window.db = db;
 
 window.checkAuth = checkAuth;
-window.isAdmin = isAdmin;
 window.loadUserData = loadUserData;
 window.loadAllMembers = loadAllMembers;
 window.generateMemberCode = generateMemberCode;
@@ -621,17 +663,21 @@ window.loadMenu = loadMenu;
 window.handleLogout = handleLogout;
 window.openAddModal = openAddModal;
 window.showToast = showToast;
+window.setupAuthPersistence = setupAuthPersistence;
 
 // ============================================
-// 10. INITIALISATION
+// 11. INITIALISATION
 // ============================================
 
-document.addEventListener('DOMContentLoaded', function() {
+// Attendre que le DOM soit chargé
+document.addEventListener('DOMContentLoaded', async function() {
     const protectedPages = ['dashboard.html', 'arbre.html', 'profil.html', 'admin/dashboard.html', 'admin/membres.html', 'admin/statistiques.html'];
     const currentPage = window.location.pathname.split('/').pop();
     
     if (protectedPages.includes(currentPage) || currentPage === '') {
-        loadMenu();
+        // Attendre un peu pour que Firebase soit prêt
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await loadMenu();
     }
 });
 
