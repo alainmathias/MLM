@@ -11,142 +11,441 @@
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
 
     <style>
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
-        .member-row:hover { background: #f8fafc; }
-        .status-active { background: #dcfce7; color: #166534; }
-        .status-suspended { background: #fee2e2; color: #991b1b; }
-        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; display: inline-block; }
+        /* ============================================
+           VARIABLES ET STYLES GLOBAUX
+           ============================================ */
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-dark: #3730a3;
+            --secondary: #06b6d4;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius: 16px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 40px rgba(0,0,0,0.14);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            background: var(--gray-50);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+        }
+        .gradient-bg-light {
+            background: linear-gradient(135deg, #eef2ff 0%, #f0f0ff 100%);
+        }
+
+        /* ============================================
+           TOAST
+           ============================================ */
         .toast {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: 24px;
+            right: 24px;
             padding: 16px 24px;
             border-radius: 12px;
             color: white;
             font-weight: 500;
-            z-index: 999;
+            z-index: 9999;
             transform: translateY(100px);
             opacity: 0;
-            transition: all 0.5s ease;
-            max-width: 400px;
+            transition: all 0.4s ease;
+            max-width: 420px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.16);
         }
-        .toast.show { transform: translateY(0); opacity: 1; }
-        .toast-success { background: #16a34a; }
-        .toast-error { background: #dc2626; }
-        .toast-warning { background: #d97706; }
-        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        .toast-warning { background: var(--warning); }
+        .toast-info { background: var(--primary); }
+
+        /* ============================================
+           ARBRE
+           ============================================ */
         .tree-container {
             overflow: auto;
-            padding: 20px;
-            min-height: 400px;
-            background: #f8fafc;
-            border-radius: 12px;
-            position: relative;
-            max-height: 600px;
+            padding: 32px 24px;
+            min-height: 480px;
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow);
+            -webkit-overflow-scrolling: touch;
         }
         .tree-wrapper {
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            min-width: 100%;
+            min-width: max-content;
             min-height: 100%;
-            transition: transform 0.3s;
+            transition: transform 0.3s ease;
+            transform-origin: top center;
+            padding: 20px 0;
         }
+
+        /* Nœud de l'arbre */
         .tree-node {
             display: flex;
             flex-direction: column;
             align-items: center;
-            transition: all 0.3s;
-        }
-        .tree-node-content {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 10px 16px;
-            min-width: 120px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.3s;
             position: relative;
         }
-        .tree-node-content.root {
-            border-color: #667eea;
-            background: #667eea;
-            color: white;
+
+        /* Contenu du nœud */
+        .tree-node-content {
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 14px;
+            padding: 12px 20px;
+            min-width: 130px;
+            max-width: 180px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: var(--transition);
+            position: relative;
+            z-index: 2;
+            cursor: default;
         }
-        .tree-node-content .node-name { font-weight: 600; font-size: 14px; }
-        .tree-node-content .node-code { font-size: 11px; color: #6b7280; }
-        .tree-node-content.root .node-code { color: #e5e7eb; }
+        .tree-node-content:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary-light);
+        }
+        .tree-node-content.root {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
+        }
+        .tree-node-content.root .node-code { color: rgba(255,255,255,0.75); }
+        .tree-node-content .node-name {
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.3;
+            color: var(--gray-800);
+        }
+        .tree-node-content.root .node-name { color: white; }
+        .tree-node-content .node-code {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--gray-500);
+            letter-spacing: 0.3px;
+        }
+        .tree-node-content .node-level {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .tree-node-content.root .node-level { color: rgba(255,255,255,0.6); }
+
+        /* Lignes de connexion */
+        .tree-connector {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .tree-connector svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+        .tree-connector path {
+            fill: none;
+            stroke: var(--gray-300);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Enfants */
         .tree-children {
             display: flex;
             justify-content: center;
-            gap: 40px;
-            margin-top: 20px;
+            gap: 48px;
+            margin-top: 28px;
             position: relative;
+            padding-top: 20px;
         }
+        /* Ligne verticale depuis le parent vers les enfants */
         .tree-children::before {
             content: '';
             position: absolute;
-            top: -10px;
+            top: -8px;
             left: 50%;
-            width: 2px;
-            height: 10px;
-            background: #9CA3AF;
+            width: 2.5px;
+            height: 28px;
+            background: var(--gray-300);
+            border-radius: 2px;
         }
         .tree-child {
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
+            flex: 1;
+            max-width: 300px;
+            min-width: 100px;
         }
+        /* Ligne horizontale entre les enfants (si plus d'un) */
         .tree-child::before {
             content: '';
             position: absolute;
-            top: -10px;
-            width: 2px;
-            height: 10px;
-            background: #9CA3AF;
+            top: -8px;
+            height: 2.5px;
+            background: var(--gray-300);
+            border-radius: 2px;
         }
-        .tree-child:first-child::before { left: 50%; }
-        .tree-child:last-child::before { right: 50%; }
-        .tree-child:only-child::before { left: 50%; }
-        
+        .tree-child:first-child::before {
+            right: 50%;
+            left: 0;
+        }
+        .tree-child:last-child::before {
+            left: 50%;
+            right: 0;
+        }
+        .tree-child:only-child::before {
+            display: none;
+        }
+        /* Ligne verticale de chaque enfant vers son nœud */
+        .tree-child .tree-node::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            width: 2.5px;
+            height: 20px;
+            background: var(--gray-300);
+            border-radius: 2px;
+            z-index: 1;
+        }
+
+        /* Position libre (bouton +) */
         .free-slot {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 120px;
-            min-height: 60px;
-            border: 2px dashed #9CA3AF;
-            border-radius: 12px;
-            background: rgba(156, 163, 175, 0.1);
+            min-width: 130px;
+            min-height: 68px;
+            border: 2px dashed var(--gray-300);
+            border-radius: 14px;
+            background: var(--gray-50);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition);
+            position: relative;
+            z-index: 2;
+            padding: 8px;
         }
         .free-slot:hover {
-            background: rgba(37, 99, 235, 0.1);
-            border-color: #2563eb;
-            transform: scale(1.05);
+            background: #eef2ff;
+            border-color: var(--primary);
+            transform: scale(1.04);
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.15);
         }
         .free-slot .add-btn {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 4px;
-            color: #6b7280;
+            color: var(--gray-400);
+            transition: var(--transition);
         }
-        .free-slot:hover .add-btn { color: #2563eb; }
-        .free-slot .add-btn i { font-size: 24px; }
-        .free-slot .add-btn span { font-size: 10px; }
-        
+        .free-slot:hover .add-btn {
+            color: var(--primary);
+        }
+        .free-slot .add-btn i {
+            font-size: 28px;
+            transition: var(--transition);
+        }
+        .free-slot:hover .add-btn i {
+            transform: scale(1.1);
+        }
+        .free-slot .add-btn span {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* ============================================
+           LISTE DES MEMBRES
+           ============================================ */
+        .member-row {
+            transition: var(--transition);
+            border-radius: 10px;
+            cursor: default;
+        }
+        .member-row:hover {
+            background: var(--gray-50);
+            transform: scale(1.01);
+        }
+        .member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: white;
+            flex-shrink: 0;
+        }
+        .member-avatar.active {
+            background: var(--primary);
+        }
+        .member-avatar.suspended {
+            background: var(--danger);
+        }
+
+        /* ============================================
+           RESPONSIVE : L'arbre reste en mode desktop
+           ============================================ */
         @media (max-width: 768px) {
-            .tree-children { gap: 20px; flex-wrap: wrap; }
-            .tree-node-content { min-width: 80px; padding: 8px 12px; }
-            .tree-node-content .node-name { font-size: 12px; }
+            .tree-container {
+                padding: 16px 12px;
+                min-height: 400px;
+                border-radius: 12px;
+            }
+            .tree-wrapper {
+                padding: 12px 0;
+                justify-content: flex-start;
+                min-width: 800px; /* Permet le scroll horizontal */
+            }
+            .tree-children {
+                gap: 24px;
+                padding-top: 16px;
+            }
+            .tree-child {
+                min-width: 80px;
+            }
+            .tree-node-content {
+                min-width: 90px;
+                padding: 10px 14px;
+            }
+            .tree-node-content .node-name { font-size: 13px; }
             .tree-node-content .node-code { font-size: 10px; }
-            .free-slot { min-width: 80px; min-height: 50px; }
-            .free-slot .add-btn i { font-size: 18px; }
+            .free-slot {
+                min-width: 90px;
+                min-height: 56px;
+            }
+            .free-slot .add-btn i { font-size: 22px; }
+            .free-slot .add-btn span { font-size: 10px; }
+
+            /* Ajustement de la liste */
+            .member-row td {
+                padding: 8px 4px;
+            }
+            .member-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 11px;
+            }
+        }
+
+        /* ============================================
+           MODAL
+           ============================================ */
+        .modal-overlay {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(6px);
+        }
+        .modal-content {
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ============================================
+           STATS CARDS
+           ============================================ */
+        .stat-card {
+            transition: var(--transition);
+            border: 1px solid var(--gray-200);
+            background: white;
+            border-radius: var(--radius);
+            padding: 16px 20px;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary-light);
+        }
+        .stat-card .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+            line-height: 1.2;
+        }
+
+        /* ============================================
+           FORMULAIRES
+           ============================================ */
+        input, select, textarea {
+            transition: var(--transition);
+            border-color: var(--gray-300);
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+            outline: none;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
     </style>
 </head>
@@ -166,35 +465,35 @@
         db.settings({ timestampsInSnapshots: true });
     </script>
 
-    <!-- Toast Notification -->
+    <!-- Toast -->
     <div id="toast" class="toast"></div>
 
     <!-- Header -->
-    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
-        <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
-            <div class="flex items-center">
-                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+    <header class="bg-white/80 backdrop-blur-sm shadow-sm fixed top-0 left-0 right-0 z-30 border-b border-gray-100">
+        <div class="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-tree text-primary text-2xl"></i>
                 <span class="text-xl font-bold text-gray-800">CommunityTree</span>
-                <span class="ml-3 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Admin</span>
+                <span class="ml-2 text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-semibold">Admin</span>
             </div>
-            <a href="index.html" class="text-gray-500 hover:text-gray-700">
+            <a href="index.html" class="text-gray-500 hover:text-gray-700 transition flex items-center gap-1 text-sm">
                 <i class="fas fa-home"></i> Accueil
             </a>
         </div>
     </header>
 
-    <main class="pt-20 px-4 pb-8 max-w-6xl mx-auto">
-        <!-- Vérification mot de passe -->
-        <div id="loginAdmin" class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow-xl p-8">
+    <main class="pt-20 px-4 pb-8 max-w-7xl mx-auto">
+        <!-- Login Admin -->
+        <div id="loginAdmin" class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div class="text-center mb-6">
-                <i class="fas fa-lock text-4xl text-purple-600 mb-3"></i>
+                <i class="fas fa-lock text-4xl text-primary mb-3"></i>
                 <h2 class="text-2xl font-bold text-gray-800">Accès Admin</h2>
                 <p class="text-gray-500 text-sm">Entrez le mot de passe pour continuer</p>
             </div>
             <form id="adminLoginForm">
                 <input type="password" id="adminPassword" placeholder="Mot de passe" 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none mb-4">
-                <button type="submit" class="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition mb-4">
+                <button type="submit" class="w-full py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition font-semibold">
                     <i class="fas fa-unlock mr-2"></i> Accéder
                 </button>
                 <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden">Mot de passe incorrect</p>
@@ -204,40 +503,70 @@
         <!-- Contenu Admin -->
         <div id="adminContent" class="hidden">
             <!-- Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Total</p>
-                    <p class="text-2xl font-bold text-gray-800" id="totalMembres">0</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Total</p>
+                            <p class="stat-value" id="totalMembres">0</p>
+                        </div>
+                        <div class="stat-icon bg-blue-50 text-blue-600">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Actifs</p>
-                    <p class="text-2xl font-bold text-green-600" id="actifsMembres">0</p>
+                <div class="stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Actifs</p>
+                            <p class="stat-value text-green-600" id="actifsMembres">0</p>
+                        </div>
+                        <div class="stat-icon bg-green-50 text-green-600">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Suspendus</p>
-                    <p class="text-2xl font-bold text-red-600" id="suspendusMembres">0</p>
+                <div class="stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Suspendus</p>
+                            <p class="stat-value text-red-600" id="suspendusMembres">0</p>
+                        </div>
+                        <div class="stat-icon bg-red-50 text-red-600">
+                            <i class="fas fa-user-slash"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Niveaux</p>
-                    <p class="text-2xl font-bold text-purple-600" id="niveauxArbre">0</p>
+                <div class="stat-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Niveaux</p>
+                            <p class="stat-value text-purple-600" id="niveauxArbre">0</p>
+                        </div>
+                        <div class="stat-icon bg-purple-50 text-purple-600">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Arbre -->
-            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-sitemap text-blue-600 mr-2"></i> Arbre - Cliquez sur <span class="text-green-600">+</span> pour ajouter
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-sitemap text-primary"></i>
+                        Arbre
+                        <span class="text-sm font-normal text-gray-400">— Cliquez sur <span class="text-green-600 font-semibold">+</span> pour ajouter</span>
                     </h2>
-                    <button id="refreshTree" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
-                        <i class="fas fa-sync-alt mr-1"></i> Rafraîchir
+                    <button id="refreshTree" class="btn-primary text-sm flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i> Rafraîchir
                     </button>
                 </div>
                 <div class="tree-container" id="treeContainer">
                     <div class="tree-wrapper" id="treeWrapper">
                         <div id="treeContent" class="flex flex-col items-center">
-                            <div class="text-gray-500 text-center py-6">
-                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <div class="text-gray-400 text-center py-10">
+                                <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
                                 <p>Chargement de l'arbre...</p>
                             </div>
                         </div>
@@ -245,51 +574,56 @@
                 </div>
             </div>
 
-            <!-- Formulaire -->
-            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-user-plus text-blue-600 mr-2"></i> Ajouter un membre
+            <!-- Formulaire d'ajout rapide -->
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-user-plus text-primary"></i>
+                    Ajouter un membre
                     <span id="parentInfo" class="text-sm font-normal text-gray-500"></span>
                 </h2>
                 <form id="addMemberForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <input type="hidden" id="parentIdField" value="">
                     <input type="hidden" id="positionField" value="">
                     <input type="text" id="nom" placeholder="Nom *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                     <input type="text" id="prenom" placeholder="Prénom *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                     <input type="tel" id="telephone" placeholder="Téléphone *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                     <input type="email" id="email" placeholder="Email *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                           class="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                     <input type="text" id="codeParrain" placeholder="Code parrain (auto)" 
-                           class="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none" readonly>
-                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                        <i class="fas fa-plus mr-2"></i> Ajouter
+                           class="px-4 py-2.5 border border-gray-300 rounded-xl bg-gray-50 text-gray-500 focus:outline-none cursor-default" readonly>
+                    <button type="submit" class="btn-primary w-full flex items-center justify-center gap-2">
+                        <i class="fas fa-plus"></i> Ajouter
                     </button>
                 </form>
                 <div id="formMessage" class="mt-3 text-sm hidden"></div>
             </div>
 
-            <!-- Liste -->
-            <div class="bg-white rounded-2xl shadow-lg p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-users text-blue-600 mr-2"></i> Membres
+            <!-- Liste des membres modernisée -->
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-users text-primary"></i>
+                        Membres
+                        <span class="text-sm font-normal text-gray-400" id="memberCount">(0)</span>
                     </h2>
-                    <input type="text" id="searchMember" placeholder="Rechercher..." 
-                           class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchMember" placeholder="Rechercher..." 
+                               class="pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:outline-none transition w-48 md:w-64">
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
-                        <thead class="text-gray-500 border-b">
+                        <thead class="text-gray-500 border-b border-gray-200">
                             <tr>
-                                <th class="text-left py-2">Code</th>
-                                <th class="text-left py-2 hidden md:table-cell">Nom</th>
-                                <th class="text-left py-2">Email</th>
-                                <th class="text-left py-2 hidden lg:table-cell">Parrain</th>
-                                <th class="text-left py-2">Statut</th>
-                                <th class="text-right py-2">Actions</th>
+                                <th class="text-left py-3 font-semibold">Membre</th>
+                                <th class="text-left py-3 font-semibold hidden md:table-cell">Email</th>
+                                <th class="text-left py-3 font-semibold hidden lg:table-cell">Parrain</th>
+                                <th class="text-left py-3 font-semibold">Statut</th>
+                                <th class="text-right py-3 font-semibold">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="membersList"></tbody>
@@ -299,15 +633,16 @@
         </div>
     </main>
 
-    <!-- Modal -->
+    <!-- Modal d'ajout -->
     <div id="addModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-overlay absolute inset-0" onclick="closeAddModal()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl max-w-md w-full p-6">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl max-w-md w-full p-6 modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800">
-                    <i class="fas fa-user-plus text-blue-600 mr-2"></i> Ajouter un filleul
+                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-user-plus text-primary"></i>
+                    Ajouter un filleul
                 </h3>
-                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 transition">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -319,26 +654,26 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Nom *</label>
                         <input type="text" id="modalNom" required 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Prénom *</label>
                         <input type="text" id="modalPrenom" required 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Téléphone *</label>
                     <input type="tel" id="modalTelephone" required 
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email *</label>
                     <input type="email" id="modalEmail" required 
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none transition">
                 </div>
-                <div id="modalError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
-                <button type="submit" class="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                <div id="modalError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"></div>
+                <button type="submit" class="w-full py-3 px-4 bg-primary text-white rounded-xl hover:bg-primary-dark transition font-semibold">
                     <i class="fas fa-spinner fa-spin hidden mr-2" id="modalLoading"></i>
                     <span id="modalBtnText">Ajouter le filleul</span>
                 </button>
@@ -355,7 +690,8 @@
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = `toast toast-${type} show`;
-            setTimeout(() => toast.classList.remove('show'), 4000);
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => toast.classList.remove('show'), 4000);
         }
 
         // ============================================
@@ -382,6 +718,7 @@
 
         let allMembers = [];
         let usersMap = {};
+        let levelsCache = {};
 
         // ============================================
         // LOAD ADMIN DATA
@@ -408,6 +745,7 @@
                     usersMap[doc.id] = { id: doc.id, ...data };
                 });
                 renderMembers(allMembers);
+                document.getElementById('memberCount').textContent = `(${allMembers.length})`;
             } catch (error) {
                 console.error('Erreur chargement membres:', error);
                 showToast('Erreur chargement des membres', 'error');
@@ -417,27 +755,42 @@
         function renderMembers(members) {
             const tbody = document.getElementById('membersList');
             if (members.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Aucun membre</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">Aucun membre</td></tr>`;
                 return;
             }
-            tbody.innerHTML = members.map(m => `
-                <tr class="member-row border-b">
-                    <td class="py-2 font-mono text-sm">${m.codeMembre || '---'}</td>
-                    <td class="py-2 hidden md:table-cell">${m.prenom || ''} ${m.nom || ''}</td>
-                    <td class="py-2 text-sm">${m.email || '---'}</td>
-                    <td class="py-2 hidden lg:table-cell">${m.codeParrain || '-'}</td>
-                    <td class="py-2">
-                        <span class="status-badge ${m.statut === 'actif' ? 'status-active' : 'status-suspended'}">
-                            ${m.statut === 'actif' ? 'Actif' : 'Suspendu'}
-                        </span>
-                    </td>
-                    <td class="py-2 text-right">
-                        <button onclick="toggleStatus('${m.id}')" class="text-yellow-500 hover:text-yellow-700 mx-1">
-                            <i class="fas ${m.statut === 'actif' ? 'fa-pause' : 'fa-play'}"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = members.map(m => {
+                const initial = (m.prenom?.[0] || '?').toUpperCase();
+                const isActive = m.statut === 'actif';
+                const avatarClass = isActive ? 'active' : 'suspended';
+                return `
+                    <tr class="member-row">
+                        <td class="py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="member-avatar ${avatarClass}">
+                                    ${initial}
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-800">${m.prenom || ''} ${m.nom || ''}</div>
+                                    <div class="text-xs text-gray-400 font-mono">${m.codeMembre || '---'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 hidden md:table-cell text-gray-600 text-sm">${m.email || '---'}</td>
+                        <td class="py-3 hidden lg:table-cell text-gray-500 text-sm">${m.codeParrain || '-'}</td>
+                        <td class="py-3">
+                            <span class="status-badge ${isActive ? 'status-active' : 'status-suspended'}">
+                                ${isActive ? 'Actif' : 'Suspendu'}
+                            </span>
+                        </td>
+                        <td class="py-3 text-right">
+                            <button onclick="toggleStatus('${m.id}')" 
+                                    class="text-${isActive ? 'yellow' : 'green'}-500 hover:text-${isActive ? 'yellow' : 'green'}-700 transition px-2">
+                                <i class="fas ${isActive ? 'fa-pause' : 'fa-play'}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         // ============================================
@@ -527,14 +880,12 @@
             
             while (queue.length > 0) {
                 const currentId = queue.shift();
-                
                 if (visited.has(currentId)) continue;
                 visited.add(currentId);
                 
                 const data = usersMap[currentId];
                 if (!data) continue;
                 
-                // Vérifier gauche
                 if (!data.leftChildId) {
                     return { parentId: currentId, position: 'left' };
                 }
@@ -542,7 +893,6 @@
                     queue.push(data.leftChildId);
                 }
                 
-                // Vérifier droite
                 if (!data.rightChildId) {
                     return { parentId: currentId, position: 'right' };
                 }
@@ -583,7 +933,6 @@
         async function ajouterMembre(data) {
             const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
             
-            // Vérifier email unique
             const emailCheck = await db.collection('users')
                 .where('email', '==', email)
                 .limit(1)
@@ -593,10 +942,8 @@
                 throw new Error('Cet email est déjà utilisé');
             }
             
-            // Générer le code
             const codeMembre = await generateMemberCode();
             
-            // Déterminer la position
             let finalParentId = parentId;
             let finalPosition = position;
             
@@ -612,7 +959,6 @@
                 }
             }
             
-            // Récupérer le code du parrain
             let parrainCode = codeParrain;
             let parrainId = null;
             
@@ -624,7 +970,6 @@
                 }
             }
             
-            // Créer le membre
             const userData = {
                 codeMembre: codeMembre,
                 nom: nom,
@@ -643,14 +988,12 @@
             
             const docRef = await db.collection('users').add(userData);
             
-            // Mettre à jour le parent
             if (finalParentId) {
                 const updateData = {};
                 updateData[finalPosition === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
                 await db.collection('users').doc(finalParentId).update(updateData);
             }
             
-            // Mettre à jour usersMap
             usersMap[docRef.id] = { id: docRef.id, ...userData };
             
             return {
@@ -672,19 +1015,45 @@
                 const newStatus = current === 'actif' ? 'suspendu' : 'actif';
                 await db.collection('users').doc(id).update({ statut: newStatus });
                 await loadAdminData();
-                showToast('Statut mis à jour', 'success');
+                showToast(`Statut mis à jour : ${newStatus}`, 'success');
             } catch (error) {
                 showToast('Erreur', 'error');
             }
         }
 
         // ============================================
-        // LOAD TREE
+        // LOAD TREE (avec niveaux et design amélioré)
         // ============================================
+
+        // Calcule le niveau de chaque nœud (profondeur)
+        function computeLevels(rootId) {
+            const levels = {};
+            const queue = [{ id: rootId, level: 0 }];
+            const visited = new Set();
+            while (queue.length > 0) {
+                const { id, level } = queue.shift();
+                if (visited.has(id)) continue;
+                visited.add(id);
+                levels[id] = level;
+                const data = usersMap[id];
+                if (data) {
+                    if (data.leftChildId && usersMap[data.leftChildId]) {
+                        queue.push({ id: data.leftChildId, level: level + 1 });
+                    }
+                    if (data.rightChildId && usersMap[data.rightChildId]) {
+                        queue.push({ id: data.rightChildId, level: level + 1 });
+                    }
+                }
+            }
+            return levels;
+        }
 
         function buildTreeWithAddButtons(nodeId, isRoot = false) {
             const node = usersMap[nodeId];
             if (!node) return null;
+
+            const level = levelsCache[nodeId] ?? 0;
+            const levelLabel = level === 0 ? 'Racine' : `Niveau ${level}`;
 
             let nodeClass = 'tree-node-content';
             if (isRoot) nodeClass += ' root';
@@ -692,11 +1061,12 @@
             const positionLabel = node.position === 'left' ? '⬅' : node.position === 'right' ? '➡' : '';
             
             let html = `
-                <div class="tree-node">
+                <div class="tree-node" data-level="${level}">
                     <div class="${nodeClass}">
                         <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
                         <div class="node-code">${node.codeMembre || '---'}</div>
-                        ${positionLabel ? `<div style="font-size:10px;color:${isRoot ? '#e5e7eb' : '#9ca3af'}">${positionLabel}</div>` : ''}
+                        <div class="node-level">${levelLabel}</div>
+                        ${positionLabel ? `<div style="font-size:10px;color:${isRoot ? 'rgba(255,255,255,0.6)' : '#9ca3af'}">${positionLabel}</div>` : ''}
                     </div>
             `;
 
@@ -712,7 +1082,7 @@
                     <div class="tree-child">
                         <div class="free-slot" onclick="openAddModal('${nodeId}', 'left', '${node.codeMembre}', '${node.prenom} ${node.nom}')">
                             <div class="add-btn">
-                                <i class="fas fa-plus-circle text-green-500"></i>
+                                <i class="fas fa-plus-circle"></i>
                                 <span>Ajouter</span>
                             </div>
                         </div>
@@ -727,7 +1097,7 @@
                     <div class="tree-child">
                         <div class="free-slot" onclick="openAddModal('${nodeId}', 'right', '${node.codeMembre}', '${node.prenom} ${node.nom}')">
                             <div class="add-btn">
-                                <i class="fas fa-plus-circle text-green-500"></i>
+                                <i class="fas fa-plus-circle"></i>
                                 <span>Ajouter</span>
                             </div>
                         </div>
@@ -742,7 +1112,6 @@
 
         async function loadTree() {
             try {
-                // Recharger usersMap depuis Firestore
                 const snapshot = await db.collection('users').get();
                 usersMap = {};
                 snapshot.forEach(doc => {
@@ -756,13 +1125,15 @@
 
                 const container = document.getElementById('treeContent');
                 if (rootId && usersMap[rootId]) {
+                    // Calcul des niveaux
+                    levelsCache = computeLevels(rootId);
                     container.innerHTML = buildTreeWithAddButtons(rootId, true);
                 } else {
                     container.innerHTML = `
-                        <div class="text-gray-500 text-center py-6">
-                            <i class="fas fa-tree text-3xl mb-2"></i>
-                            <p>Aucun arbre</p>
-                            <p class="text-sm mt-1">Ajoutez le premier membre via le formulaire</p>
+                        <div class="text-gray-400 text-center py-10">
+                            <i class="fas fa-tree text-4xl mb-3"></i>
+                            <p class="text-lg font-medium">Aucun arbre</p>
+                            <p class="text-sm">Ajoutez le premier membre via le formulaire</p>
                         </div>
                     `;
                 }
@@ -774,7 +1145,7 @@
 
         document.getElementById('refreshTree').addEventListener('click', function() {
             loadTree();
-            showToast('🔄 Arbre rafraîchi', 'success');
+            showToast('🔄 Arbre rafraîchi', 'info');
         });
 
         // ============================================
