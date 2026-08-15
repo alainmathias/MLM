@@ -65,23 +65,7 @@
     </style>
 </head>
 <body>
-    <!-- Configuration Firebase -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
-            authDomain: "mlm1-598b5.firebaseapp.com",
-            projectId: "mlm1-598b5",
-            storageBucket: "mlm1-598b5.firebasestorage.app",
-            messagingSenderId: "601982652419",
-            appId: "1:601982652419:web:a34ccee92f95950a63be36",
-            measurementId: "G-DLCVD2MRSC"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        db.settings({ timestampsInSnapshots: true });
-    </script>
+    
 
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-spinner">
@@ -241,7 +225,7 @@
     </div>
 
     <script>
-        let currentUserData = null;
+     //   let currentUserData = null;
         let currentUser = null;
 
         // ============================================
