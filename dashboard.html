@@ -509,7 +509,7 @@
         // ============================================
 
         // Vérifier l'authentification
-        auth.onAuthStateChanged((user) => {
+        window.auth.onAuthStateChanged((user) => {
             if (!user) {
                 console.log('Utilisateur non connecté, redirection vers connexion');
                 window.location.href = 'connexion.html';
