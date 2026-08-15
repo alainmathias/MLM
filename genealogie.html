@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Généalogie - CommunityTree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .member-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .member-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .tree-line { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            position: relative;
+        }
+        .tree-line::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 30px;
+            background: #9CA3AF;
+        }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-suspended { background: #fee2e2; color: #991b1b; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .search-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 999;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+            max-width: 400px;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-error { background: #dc2626; }
+        .toast-info { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
+        <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
+            <div class="flex items-center">
+                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
+                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+            </div>
+            <a href="index.html" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+    </header>
+
+    <main class="pt-20 px-4 pb-8 max-w-4xl mx-auto">
+        <!-- Zone de recherche -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8">
+            <div class="text-center mb-6">
+                <i class="fas fa-sitemap text-4xl text-blue-600 mb-3"></i>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Ma Généalogie</h1>
+                <p class="text-gray-500 text-sm mt-1">Entrez votre code ou email pour voir votre arbre</p>
+            </div>
+
+            <form id="searchForm" class="flex flex-col md:flex-row gap-3 max-w-2xl mx-auto">
+                <input type="text" id="searchInput" 
+                       placeholder="Code (MB000001) ou Email" 
+                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg search-input focus:outline-none">
+                <button type="submit" 
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
+                    <i class="fas fa-search mr-2"></i> Rechercher
+                </button>
+            </form>
+
+            <div id="searchHint" class="text-center text-sm text-gray-400 mt-3">
+                <i class="fas fa-info-circle mr-1"></i>
+                Exemple: MB000001 ou jean@email.com
+            </div>
+        </div>
+
+        <!-- Résultats -->
+        <div id="results" class="hidden">
+            <!-- Profil du membre -->
+            <div id="memberProfile" class="bg-white rounded-2xl shadow-lg p-6 mb-6 fade-in">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 rounded-full gradient-bg flex items-center justify-center text-white text-xl font-bold" id="memberInitial">J</div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800" id="memberName">Jean Dupont</h2>
+                        <p class="text-sm text-gray-500 font-mono" id="memberCode">MB000001</p>
+                    </div>
+                    <span class="ml-auto status-badge" id="memberStatus">Actif</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div><span class="text-gray-500">Email:</span> <span id="memberEmail" class="font-medium">---</span></div>
+                    <div><span class="text-gray-500">Téléphone:</span> <span id="memberPhone" class="font-medium">---</span></div>
+                    <div><span class="text-gray-500">Position:</span> <span id="memberPosition" class="font-medium">---</span></div>
+                </div>
+            </div>
+
+            <!-- Ascendance (Parrain) -->
+            <div id="ascendance" class="bg-white rounded-2xl shadow-lg p-6 mb-6 fade-in">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">
+                    <i class="fas fa-arrow-up text-blue-600 mr-2"></i> Ascendance
+                </h3>
+                <div id="ascendanceContent" class="space-y-3">
+                    <p class="text-gray-500 text-sm">Chargement...</p>
+                </div>
+            </div>
+
+            <!-- Descendance (Enfants) -->
+            <div id="descendance" class="bg-white rounded-2xl shadow-lg p-6 fade-in">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">
+                    <i class="fas fa-arrow-down text-green-600 mr-2"></i> Descendance
+                </h3>
+                <div id="descendanceContent" class="space-y-3">
+                    <p class="text-gray-500 text-sm">Chargement...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aucun résultat -->
+        <div id="noResult" class="hidden text-center py-12">
+            <i class="fas fa-user-slash text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-600">Aucun membre trouvé</h3>
+            <p class="text-gray-400 text-sm mt-2">Vérifiez que le code ou l'email est correct</p>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // TOAST
+        // ============================================
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        // ============================================
+        // RECHERCHE
+        // ============================================
+
+        let usersMap = {};
+
+        async function loadAllUsers() {
+            const snapshot = await db.collection('users').get();
+            usersMap = {};
+            snapshot.forEach(doc => {
+                usersMap[doc.id] = { id: doc.id, ...doc.data() };
+            });
+        }
+
+        async function searchMember(searchTerm) {
+            if (!searchTerm || searchTerm.length < 2) {
+                showToast('Veuillez entrer un code ou un email valide', 'error');
+                return;
+            }
+
+            searchTerm = searchTerm.trim();
+
+            // Chercher par code ou email
+            let found = null;
+            for (const [id, data] of Object.entries(usersMap)) {
+                if (data.codeMembre === searchTerm || data.email === searchTerm) {
+                    found = { id, ...data };
+                    break;
+                }
+            }
+
+            if (!found) {
+                document.getElementById('results').classList.add('hidden');
+                document.getElementById('noResult').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('noResult').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+
+            // Afficher le profil
+            displayProfile(found);
+            
+            // Afficher l'ascendance
+            displayAscendance(found);
+            
+            // Afficher la descendance
+            displayDescendance(found);
+        }
+
+        // ============================================
+        // AFFICHAGE DU PROFIL
+        // ============================================
+
+        function displayProfile(member) {
+            document.getElementById('memberInitial').textContent = (member.prenom?.[0] || 'U').toUpperCase();
+            document.getElementById('memberName').textContent = `${member.prenom || ''} ${member.nom || ''}`.trim() || 'Inconnu';
+            document.getElementById('memberCode').textContent = member.codeMembre || '---';
+            document.getElementById('memberEmail').textContent = member.email || '---';
+            document.getElementById('memberPhone').textContent = member.telephone || 'Non renseigné';
+            
+            const positionMap = { 'left': 'Gauche', 'right': 'Droite', null: 'Racine' };
+            document.getElementById('memberPosition').textContent = positionMap[member.position] || '---';
+
+            const statusEl = document.getElementById('memberStatus');
+            if (member.statut === 'actif') {
+                statusEl.className = 'status-badge status-active ml-auto';
+                statusEl.textContent = 'Actif';
+            } else {
+                statusEl.className = 'status-badge status-suspended ml-auto';
+                statusEl.textContent = 'Suspendu';
+            }
+        }
+
+        // ============================================
+        // ASCENDANCE (Parrain + Parent)
+        // ============================================
+
+        function displayAscendance(member) {
+            const container = document.getElementById('ascendanceContent');
+            let html = '';
+
+            // Parrain
+            if (member.parrainId && usersMap[member.parrainId]) {
+                const parrain = usersMap[member.parrainId];
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                        <i class="fas fa-user-tie text-blue-600"></i>
+                        <div>
+                            <span class="font-medium">Parrain:</span>
+                            <span>${parrain.prenom || ''} ${parrain.nom || ''}</span>
+                            <span class="text-sm text-gray-500 font-mono ml-2">${parrain.codeMembre}</span>
+                        </div>
+                        <a href="javascript:void(0)" onclick="searchMember('${parrain.codeMembre}')" 
+                           class="ml-auto text-blue-600 hover:text-blue-800 text-sm">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <i class="fas fa-user-tie text-gray-400"></i>
+                        <span class="text-gray-500">Aucun parrain (Racine)</span>
+                    </div>
+                `;
+            }
+
+            // Parent
+            if (member.parentId && usersMap[member.parentId]) {
+                const parent = usersMap[member.parentId];
+                const positionLabel = member.position === 'left' ? 'Gauche' : 'Droite';
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                        <i class="fas fa-user-friends text-green-600"></i>
+                        <div>
+                            <span class="font-medium">Parent (${positionLabel}):</span>
+                            <span>${parent.prenom || ''} ${parent.nom || ''}</span>
+                            <span class="text-sm text-gray-500 font-mono ml-2">${parent.codeMembre}</span>
+                        </div>
+                        <a href="javascript:void(0)" onclick="searchMember('${parent.codeMembre}')" 
+                           class="ml-auto text-blue-600 hover:text-blue-800 text-sm">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html || '<p class="text-gray-500 text-sm">Aucune ascendance</p>';
+        }
+
+        // ============================================
+        // DESCENDANCE (Enfants + descendants)
+        // ============================================
+
+        function displayDescendance(member) {
+            const container = document.getElementById('descendanceContent');
+            
+            // Récupérer tous les descendants (BFS)
+            const descendants = [];
+            const queue = [member.id];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+
+                const current = usersMap[currentId];
+                if (!current) continue;
+
+                if (currentId !== member.id) {
+                    descendants.push(current);
+                }
+
+                if (current.leftChildId) queue.push(current.leftChildId);
+                if (current.rightChildId) queue.push(current.rightChildId);
+            }
+
+            if (descendants.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-gray-400">
+                        <i class="fas fa-leaf text-3xl mb-2"></i>
+                        <p>Aucun descendant</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Construire l'arbre des descendants (2 niveaux max pour lisibilité)
+            let html = '<div class="tree-view">';
+            
+            // Enfants directs
+            const enfants = descendants.filter(d => d.parentId === member.id);
+            
+            if (enfants.length === 0) {
+                html += `<p class="text-gray-500 text-sm">Aucun enfant</p>`;
+            } else {
+                html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+                enfants.forEach(enfant => {
+                    const petitsEnfants = descendants.filter(d => d.parentId === enfant.id);
+                    html += `
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-user-child text-green-600"></i>
+                                <span class="font-medium">${enfant.prenom || ''} ${enfant.nom || ''}</span>
+                                <span class="text-xs text-gray-500 font-mono">${enfant.codeMembre}</span>
+                                <a href="javascript:void(0)" onclick="searchMember('${enfant.codeMembre}')" 
+                                   class="ml-auto text-blue-600 hover:text-blue-800 text-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                            ${petitsEnfants.length > 0 ? `
+                                <div class="ml-6 mt-2 space-y-1">
+                                    ${petitsEnfants.map(pe => `
+                                        <div class="flex items-center gap-2 text-sm">
+                                            <i class="fas fa-child text-blue-400"></i>
+                                            <span>${pe.prenom || ''} ${pe.nom || ''}</span>
+                                            <span class="text-xs text-gray-500 font-mono">${pe.codeMembre}</span>
+                                            <a href="javascript:void(0)" onclick="searchMember('${pe.codeMembre}')" 
+                                               class="text-blue-600 hover:text-blue-800 text-xs">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                            ${petitsEnfants.length === 0 ? `<div class="ml-6 mt-1 text-xs text-gray-400">Aucun petit-enfant</div>` : ''}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ============================================
+        // FORMULAIRE DE RECHERCHE
+        // ============================================
+
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) {
+                showToast('Veuillez entrer un code ou un email', 'error');
+                return;
+            }
+            await loadAllUsers();
+            searchMember(searchTerm);
+        });
+
+        // ============================================
+        // RECHERCHE RAPIDE (clique sur un lien)
+        // ============================================
+
+        window.searchMember = async function(term) {
+            document.getElementById('searchInput').value = term;
+            await loadAllUsers();
+            searchMember(term);
+        };
+
+        // ============================================
+        // INITIALISATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllUsers();
+        });
+    </script>
+</body>
+</html>
