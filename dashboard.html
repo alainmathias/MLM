@@ -254,7 +254,7 @@
         // Déconnexion
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
-            auth.signOut().then(() => {
+           window.auth.signOut().then(() => {
                 window.location.href = 'connexion.html';
             }).catch((error) => {
                 console.error('Erreur déconnexion:', error);
