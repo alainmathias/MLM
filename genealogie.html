@@ -6,20 +6,32 @@
     <title>Ma Généalogie - CommunityTree</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
 
     <style>
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        :root {
+            --line-color: #cbd5e1;
+            --line-color-strong: #94a3b8;
+            --ink: #1e293b;
+            --brand-1: #4f46e5;
+            --brand-2: #7c3aed;
+        }
+        * { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+
+        .gradient-bg { background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 100%); }
         .member-card { transition: transform 0.2s, box-shadow 0.2s; }
-        .member-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .member-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -8px rgba(15,23,42,0.12); }
         .status-active { background: #dcfce7; color: #166534; }
         .status-suspended { background: #fee2e2; color: #991b1b; }
-        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; display: inline-block; }
-        .search-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; display: inline-block; letter-spacing: 0.2px; }
+        .search-input:focus { border-color: var(--brand-1); box-shadow: 0 0 0 3px rgba(79,70,229,0.15); }
         .fade-in { animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         .toast {
             position: fixed;
             bottom: 20px;
@@ -33,64 +45,76 @@
             opacity: 0;
             transition: all 0.5s ease;
             max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast-error { background: #dc2626; }
-        .toast-info { background: #2563eb; }
+        .toast-info { background: #4f46e5; }
         .toast-success { background: #16a34a; }
-        
-        /* Arbre miniature dans la généalogie */
+
+        /* ===== ARBRE MINIATURE ===== */
         .mini-tree {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 12px;
-            background: #f8fafc;
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
+            padding: 24px 16px;
+            background:
+                radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0) 0 0/22px 22px,
+                #f8fafc;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
         }
         .mini-tree .level {
             display: flex;
-            gap: 20px;
+            gap: 14px;
             justify-content: center;
             flex-wrap: wrap;
-            margin: 4px 0;
+            position: relative;
         }
+        .mini-tree .level + .level { margin-top: 26px; }
+        .mini-tree .level::before {
+            content: '';
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            width: 2px;
+            height: 18px;
+            background: var(--line-color-strong);
+            transform: translateX(-1px);
+        }
+        .mini-tree .level:first-child::before { display: none; }
         .mini-tree .node {
-            padding: 6px 14px;
-            border-radius: 8px;
+            padding: 7px 14px;
+            border-radius: 10px;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
             background: white;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 5px rgba(15,23,42,0.05);
+            color: var(--ink);
         }
         .mini-tree .node.root {
-            background: #4f46e5;
+            background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
             color: white;
-            border-color: #4f46e5;
-        }
-        .mini-tree .node.member {
-            background: white;
+            border-color: transparent;
+            box-shadow: 0 8px 16px -6px rgba(79,70,229,0.4);
         }
         .mini-tree .node.current {
-            background: #dbeafe;
-            border-color: #4f46e5;
-            font-weight: 600;
+            background: #eef2ff;
+            border-color: var(--brand-1);
+            color: #4338ca;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
         }
         .mini-tree .node.free {
-            background: #f3f4f6;
+            background: #f1f5f9;
             border-style: dashed;
-            color: #9ca3af;
+            color: #94a3b8;
+            font-weight: 500;
         }
-        .mini-tree .connector {
-            color: #9ca3af;
-            font-size: 14px;
-            margin: 2px 0;
-        }
+        .mini-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50">
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
@@ -110,38 +134,42 @@
     <div id="toast" class="toast"></div>
 
     <!-- Header -->
-    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30 border-b border-slate-100">
         <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
             <div class="flex items-center">
-                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
-                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
+                <div class="w-9 h-9 rounded-xl gradient-bg flex items-center justify-center mr-2">
+                    <i class="fas fa-tree text-white text-sm"></i>
+                </div>
+                <span class="text-xl font-bold text-slate-800 tracking-tight">CommunityTree</span>
             </div>
-            <a href="index.html" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-home"></i> Accueil
+            <a href="index.html" class="text-slate-400 hover:text-slate-700 transition text-sm font-medium">
+                <i class="fas fa-home mr-1"></i> Accueil
             </a>
         </div>
     </header>
 
     <main class="pt-20 px-4 pb-8 max-w-4xl mx-auto">
         <!-- Zone de recherche -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8 mb-8">
             <div class="text-center mb-6">
-                <i class="fas fa-sitemap text-4xl text-blue-600 mb-3"></i>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Ma Généalogie</h1>
-                <p class="text-gray-500 text-sm mt-1">Entrez votre code ou email pour voir votre arbre</p>
+                <div class="w-14 h-14 rounded-2xl gradient-bg flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-sitemap text-white text-xl"></i>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Ma Généalogie</h1>
+                <p class="text-slate-500 text-sm mt-1">Entrez votre code ou email pour voir votre arbre</p>
             </div>
 
             <form id="searchForm" class="flex flex-col md:flex-row gap-3 max-w-2xl mx-auto">
-                <input type="text" id="searchInput" 
-                       placeholder="Code (MB000001) ou Email" 
-                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg search-input focus:outline-none">
-                <button type="submit" 
-                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
+                <input type="text" id="searchInput"
+                       placeholder="Code (MB000001) ou Email"
+                       class="flex-1 px-4 py-3 border border-slate-200 rounded-xl search-input focus:outline-none transition">
+                <button type="submit"
+                        class="px-6 py-3 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200 flex items-center justify-center">
                     <i class="fas fa-search mr-2"></i> Rechercher
                 </button>
             </form>
 
-            <div id="searchHint" class="text-center text-sm text-gray-400 mt-3">
+            <div id="searchHint" class="text-center text-sm text-slate-400 mt-3">
                 <i class="fas fa-info-circle mr-1"></i>
                 Exemple: MB000001 ou jean@email.com
             </div>
@@ -150,61 +178,79 @@
         <!-- Résultats -->
         <div id="results" class="hidden">
             <!-- Profil du membre -->
-            <div id="memberProfile" class="bg-white rounded-2xl shadow-lg p-6 mb-6 fade-in">
-                <div class="flex items-center gap-4 mb-4">
+            <div id="memberProfile" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6 fade-in">
+                <div class="flex items-center gap-4 mb-5">
                     <div class="w-14 h-14 rounded-full gradient-bg flex items-center justify-center text-white text-xl font-bold" id="memberInitial">J</div>
                     <div>
-                        <h2 class="text-xl font-bold text-gray-800" id="memberName">Jean Dupont</h2>
-                        <p class="text-sm text-gray-500 font-mono" id="memberCode">MB000001</p>
+                        <h2 class="text-xl font-bold text-slate-800" id="memberName">Jean Dupont</h2>
+                        <p class="text-sm text-slate-400 font-mono" id="memberCode">MB000001</p>
                     </div>
                     <span class="ml-auto status-badge" id="memberStatus">Actif</span>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <div><span class="text-gray-500">Email:</span> <span id="memberEmail" class="font-medium">---</span></div>
-                    <div><span class="text-gray-500">Téléphone:</span> <span id="memberPhone" class="font-medium">---</span></div>
-                    <div><span class="text-gray-500">Position:</span> <span id="memberPosition" class="font-medium">---</span></div>
-                    <div><span class="text-gray-500">Niveau:</span> <span id="memberLevel" class="font-medium">---</span></div>
-                    <div><span class="text-gray-500">Parrain:</span> <span id="memberParrain" class="font-medium">---</span></div>
-                    <div><span class="text-gray-500">Descendants:</span> <span id="memberDescendants" class="font-medium">---</span></div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Email</p>
+                        <p id="memberEmail" class="font-medium text-slate-700 mt-0.5">---</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Téléphone</p>
+                        <p id="memberPhone" class="font-medium text-slate-700 mt-0.5">---</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Position</p>
+                        <p id="memberPosition" class="font-medium text-slate-700 mt-0.5">---</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Niveau</p>
+                        <p id="memberLevel" class="font-medium text-slate-700 mt-0.5">---</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Parrain</p>
+                        <p id="memberParrain" class="font-medium text-slate-700 mt-0.5">---</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Descendants</p>
+                        <p id="memberDescendants" class="font-medium text-slate-700 mt-0.5">---</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Ascendance -->
-            <div id="ascendance" class="bg-white rounded-2xl shadow-lg p-6 mb-6 fade-in">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">
-                    <i class="fas fa-arrow-up text-blue-600 mr-2"></i> Ascendance (vers le haut)
+            <div id="ascendance" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6 fade-in">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">
+                    <i class="fas fa-arrow-up text-indigo-600 mr-2"></i> Ascendance (vers le haut)
                 </h3>
                 <div id="ascendanceContent" class="space-y-3">
-                    <p class="text-gray-500 text-sm">Chargement...</p>
+                    <p class="text-slate-400 text-sm">Chargement...</p>
                 </div>
             </div>
 
             <!-- Descendance -->
-            <div id="descendance" class="bg-white rounded-2xl shadow-lg p-6 fade-in">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">
-                    <i class="fas fa-arrow-down text-green-600 mr-2"></i> Descendance (vers le bas)
+            <div id="descendance" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 fade-in">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">
+                    <i class="fas fa-arrow-down text-emerald-600 mr-2"></i> Descendance (vers le bas)
                 </h3>
                 <div id="descendanceContent" class="space-y-3">
-                    <p class="text-gray-500 text-sm">Chargement...</p>
+                    <p class="text-slate-400 text-sm">Chargement...</p>
                 </div>
             </div>
 
             <!-- Mini arbre -->
-            <div id="miniTree" class="bg-white rounded-2xl shadow-lg p-6 mt-6 fade-in">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">
-                    <i class="fas fa-tree text-purple-600 mr-2"></i> Vue d'ensemble
+            <div id="miniTree" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6 fade-in">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">
+                    <i class="fas fa-tree text-indigo-600 mr-2"></i> Vue d'ensemble
                 </h3>
                 <div id="miniTreeContent" class="mini-tree">
-                    <p class="text-gray-500 text-sm">Chargement...</p>
+                    <p class="text-slate-400 text-sm">Chargement...</p>
                 </div>
             </div>
         </div>
 
         <!-- Aucun résultat -->
-        <div id="noResult" class="hidden text-center py-12">
-            <i class="fas fa-user-slash text-6xl text-gray-300 mb-4"></i>
-            <h3 class="text-xl font-bold text-gray-600">Aucun membre trouvé</h3>
-            <p class="text-gray-400 text-sm mt-2">Vérifiez que le code ou l'email est correct</p>
+        <div id="noResult" class="hidden text-center py-16 bg-white rounded-2xl shadow-sm border border-slate-100">
+            <i class="fas fa-user-slash text-5xl text-slate-200 mb-4"></i>
+            <h3 class="text-xl font-bold text-slate-600">Aucun membre trouvé</h3>
+            <p class="text-slate-400 text-sm mt-2">Vérifiez que le code ou l'email est correct</p>
         </div>
     </main>
 
@@ -260,7 +306,6 @@
 
             searchTerm = searchTerm.trim().toLowerCase();
 
-            // Chercher par code ou email (insensible à la casse)
             let found = null;
             for (const member of allMembers) {
                 const codeMatch = member.codeMembre?.toLowerCase() === searchTerm;
@@ -280,19 +325,11 @@
             document.getElementById('noResult').classList.add('hidden');
             document.getElementById('results').classList.remove('hidden');
 
-            // Calculer le niveau du membre
             const level = getMemberLevel(found.id);
 
-            // Afficher le profil
             displayProfile(found, level);
-            
-            // Afficher l'ascendance
             displayAscendance(found);
-            
-            // Afficher la descendance
             displayDescendance(found);
-
-            // Afficher le mini arbre
             displayMiniTree(found.id);
         }
 
@@ -303,14 +340,14 @@
         function getMemberLevel(memberId) {
             let level = 0;
             let currentId = memberId;
-            
+
             while (currentId) {
                 const member = usersMap[currentId];
                 if (!member || !member.parentId) break;
                 currentId = member.parentId;
                 level++;
             }
-            
+
             return level;
         }
 
@@ -324,12 +361,11 @@
             document.getElementById('memberCode').textContent = member.codeMembre || '---';
             document.getElementById('memberEmail').textContent = member.email || '---';
             document.getElementById('memberPhone').textContent = member.telephone || 'Non renseigné';
-            
+
             const positionMap = { 'left': 'Gauche', 'right': 'Droite', null: 'Racine' };
             document.getElementById('memberPosition').textContent = positionMap[member.position] || '---';
             document.getElementById('memberLevel').textContent = level === 0 ? 'Racine' : `Niveau ${level}`;
 
-            // Parrain
             if (member.parrainId && usersMap[member.parrainId]) {
                 const parrain = usersMap[member.parrainId];
                 document.getElementById('memberParrain').textContent = `${parrain.prenom || ''} ${parrain.nom || ''} (${parrain.codeMembre})`;
@@ -337,11 +373,9 @@
                 document.getElementById('memberParrain').textContent = 'Aucun (Racine)';
             }
 
-            // Compter les descendants
             const descendants = countAllDescendants(member.id);
             document.getElementById('memberDescendants').textContent = descendants;
 
-            // Statut
             const statusEl = document.getElementById('memberStatus');
             if (member.statut === 'actif') {
                 statusEl.className = 'status-badge status-active ml-auto';
@@ -360,15 +394,15 @@
             let count = 0;
             const queue = [memberId];
             const visited = new Set();
-            
+
             while (queue.length > 0) {
                 const currentId = queue.shift();
                 if (visited.has(currentId)) continue;
                 visited.add(currentId);
-                
+
                 const member = usersMap[currentId];
                 if (!member) continue;
-                
+
                 if (member.leftChildId && usersMap[member.leftChildId]) {
                     count++;
                     queue.push(member.leftChildId);
@@ -378,7 +412,7 @@
                     queue.push(member.rightChildId);
                 }
             }
-            
+
             return count;
         }
 
@@ -391,8 +425,7 @@
             let html = '';
             let currentId = member.id;
             let ancestors = [];
-            
-            // Remonter la chaîne des parents
+
             while (currentId) {
                 const current = usersMap[currentId];
                 if (!current) break;
@@ -403,43 +436,44 @@
                     break;
                 }
             }
-            
-            // Inverser pour avoir de la racine vers le membre
+
             ancestors = ancestors.reverse();
-            
+
             if (ancestors.length === 0) {
-                html = '<p class="text-gray-500 text-sm">Aucune ascendance</p>';
+                html = '<p class="text-slate-400 text-sm">Aucune ascendance</p>';
             } else {
                 html = ancestors.map((a, index) => {
                     const isCurrent = a.id === member.id;
                     const isRoot = index === 0;
-                    const arrow = index < ancestors.length - 1 ? '↓' : '';
-                    const positionLabel = a.position === 'left' ? ' (G)' : a.position === 'right' ? ' (D)' : '';
-                    
+                    const arrow = index < ancestors.length - 1;
+                    const positionLabel = a.position === 'left' ? 'Gauche' : a.position === 'right' ? 'Droite' : '';
+
                     return `
-                        <div class="flex items-center gap-3 p-3 ${isCurrent ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'} rounded-lg">
-                            <div class="flex items-center gap-2 flex-1">
-                                <span class="w-8 h-8 rounded-full ${isRoot ? 'bg-purple-600' : isCurrent ? 'bg-blue-600' : 'bg-gray-400'} flex items-center justify-center text-white text-xs font-bold">
-                                    ${isRoot ? 'R' : (a.prenom?.[0] || '?').toUpperCase()}
-                                </span>
-                                <div>
-                                    <span class="font-medium ${isCurrent ? 'text-blue-700' : ''}">
-                                        ${isRoot ? '⭐ Racine' : `${a.prenom || ''} ${a.nom || ''}`}
+                        <div>
+                            <div class="flex items-center gap-3 p-3 rounded-xl transition ${isCurrent ? 'bg-indigo-50 border border-indigo-200' : 'bg-slate-50 border border-transparent'}">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <span class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-white text-xs font-bold ${isRoot ? 'gradient-bg' : isCurrent ? 'bg-indigo-600' : 'bg-slate-400'}">
+                                        ${isRoot ? '<i class="fas fa-star text-[10px]"></i>' : (a.prenom?.[0] || '?').toUpperCase()}
                                     </span>
-                                    <span class="text-xs text-gray-500 font-mono ml-2">${a.codeMembre}</span>
-                                    ${positionLabel ? `<span class="text-xs text-gray-400">${positionLabel}</span>` : ''}
-                                    ${isCurrent ? ' <span class="text-xs text-blue-600 font-semibold">(Vous)</span>' : ''}
+                                    <div class="min-w-0">
+                                        <span class="font-semibold ${isCurrent ? 'text-indigo-700' : 'text-slate-700'}">
+                                            ${isRoot ? 'Racine' : `${a.prenom || ''} ${a.nom || ''}`}
+                                        </span>
+                                        <span class="text-xs text-slate-400 font-mono ml-2">${a.codeMembre}</span>
+                                        ${positionLabel ? `<span class="ml-2" style="background:#eef2ff;color:#4f46e5;font-size:9px;font-weight:700;padding:2px 7px;border-radius:999px;">${positionLabel}</span>` : ''}
+                                        ${isCurrent ? '<span class="text-xs text-indigo-600 font-semibold ml-2">(Vous)</span>' : ''}
+                                    </div>
                                 </div>
+                                ${!isCurrent && !isRoot ? `<a href="javascript:void(0)" onclick="searchAndDisplay('${a.codeMembre}')" class="text-indigo-400 hover:text-indigo-600 transition shrink-0">
+                                    <i class="fas fa-eye"></i>
+                                </a>` : ''}
                             </div>
-                            ${arrow ? `<span class="text-gray-400 text-sm">${arrow}</span>` : ''}
-                            ${!isCurrent && !isRoot ? `<a href="javascript:void(0)" onclick="searchAndDisplay('${a.codeMembre}')" class="text-blue-500 hover:text-blue-700 text-sm">
-                                <i class="fas fa-eye"></i>
-                            </a>` : ''}
+                            ${arrow ? `<div class="flex justify-center py-1"><i class="fas fa-chevron-down text-slate-300 text-xs"></i></div>` : ''}
                         </div>
                     `;
                 }).join('');
             }
-            
+
             container.innerHTML = html;
         }
 
@@ -449,59 +483,60 @@
 
         function displayDescendance(member) {
             const container = document.getElementById('descendanceContent');
-            
-            // Récupérer les enfants directs
+
             const enfants = allMembers.filter(m => m.parentId === member.id);
-            
+
             if (enfants.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-6 text-gray-400">
+                    <div class="text-center py-8 text-slate-400">
                         <i class="fas fa-leaf text-3xl mb-2"></i>
-                        <p>Aucun descendant</p>
+                        <p class="text-sm">Aucun descendant</p>
                     </div>
                 `;
                 return;
             }
 
             let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
-            
+
             enfants.forEach(enfant => {
                 const petitsEnfants = allMembers.filter(m => m.parentId === enfant.id);
                 const level = getMemberLevel(enfant.id);
-                
+
                 html += `
-                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-100">
                         <div class="flex items-center gap-2">
-                            <i class="fas fa-user-child text-green-600"></i>
-                            <span class="font-medium">${enfant.prenom || ''} ${enfant.nom || ''}</span>
-                            <span class="text-xs text-gray-500 font-mono">${enfant.codeMembre}</span>
-                            <span class="text-xs text-gray-400">Niv.${level}</span>
-                            <a href="javascript:void(0)" onclick="searchAndDisplay('${enfant.codeMembre}')" 
-                               class="ml-auto text-blue-500 hover:text-blue-700 text-sm">
+                            <span class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shrink-0">
+                                ${(enfant.prenom?.[0] || '?').toUpperCase()}
+                            </span>
+                            <span class="font-semibold text-slate-700 truncate">${enfant.prenom || ''} ${enfant.nom || ''}</span>
+                            <span class="text-xs text-slate-400 font-mono">${enfant.codeMembre}</span>
+                            <span class="text-xs text-slate-400">Niv.${level}</span>
+                            <a href="javascript:void(0)" onclick="searchAndDisplay('${enfant.codeMembre}')"
+                               class="ml-auto text-indigo-400 hover:text-indigo-600 transition shrink-0">
                                 <i class="fas fa-eye"></i>
                             </a>
                         </div>
                         ${petitsEnfants.length > 0 ? `
-                            <div class="ml-6 mt-2 space-y-1">
+                            <div class="ml-9 mt-2.5 space-y-1.5 border-l-2 border-slate-200 pl-3">
                                 ${petitsEnfants.map(pe => `
                                     <div class="flex items-center gap-2 text-sm">
-                                        <i class="fas fa-child text-blue-400"></i>
-                                        <span>${pe.prenom || ''} ${pe.nom || ''}</span>
-                                        <span class="text-xs text-gray-500 font-mono">${pe.codeMembre}</span>
-                                        <a href="javascript:void(0)" onclick="searchAndDisplay('${pe.codeMembre}')" 
-                                           class="text-blue-500 hover:text-blue-700 text-xs">
+                                        <i class="fas fa-child text-indigo-300 text-xs"></i>
+                                        <span class="text-slate-600">${pe.prenom || ''} ${pe.nom || ''}</span>
+                                        <span class="text-xs text-slate-400 font-mono">${pe.codeMembre}</span>
+                                        <a href="javascript:void(0)" onclick="searchAndDisplay('${pe.codeMembre}')"
+                                           class="text-indigo-400 hover:text-indigo-600 text-xs transition">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </div>
                                 `).join('')}
                             </div>
                         ` : `
-                            <div class="ml-6 mt-1 text-xs text-gray-400">Aucun petit-enfant</div>
+                            <div class="ml-9 mt-1.5 text-xs text-slate-400">Aucun petit-enfant</div>
                         `}
                     </div>
                 `;
             });
-            
+
             html += '</div>';
             container.innerHTML = html;
         }
@@ -512,31 +547,26 @@
 
         function displayMiniTree(memberId) {
             const container = document.getElementById('miniTreeContent');
-            
-            // Trouver la racine
+
             let rootId = null;
             for (const [id, data] of Object.entries(usersMap)) {
                 if (!data.position) { rootId = id; break; }
             }
-            
+
             if (!rootId) {
-                container.innerHTML = '<p class="text-gray-500 text-sm">Aucun arbre disponible</p>';
+                container.innerHTML = '<p class="text-slate-400 text-sm">Aucun arbre disponible</p>';
                 return;
             }
-            
-            // Construire un arbre simplifié (3 niveaux max)
+
             let html = '';
-            
-            // Niveau 0 : Racine
+
             const root = usersMap[rootId];
             const isRoot = rootId === memberId;
-            
+
             html += `<div class="level">`;
-            html += `<span class="node root ${isRoot ? 'current' : ''}">${isRoot ? '⭐ ' : ''}${root.prenom || ''} ${root.nom || ''}</span>`;
+            html += `<span class="node root ${isRoot ? 'current' : ''}">${isRoot ? '<i class="fas fa-star mr-1 text-[10px]"></i>' : ''}${root.prenom || ''} ${root.nom || ''}</span>`;
             html += `</div>`;
-            html += `<div class="connector">│</div>`;
-            
-            // Niveau 1 : Enfants de la racine
+
             const level1 = allMembers.filter(m => m.parentId === rootId);
             if (level1.length > 0) {
                 html += `<div class="level">`;
@@ -544,37 +574,34 @@
                     const isCurrent = m.id === memberId;
                     const hasChildren = allMembers.some(child => child.parentId === m.id);
                     html += `<span class="node member ${isCurrent ? 'current' : ''}">
-                        ${isCurrent ? '⭐ ' : ''}${m.prenom || ''} ${m.nom || ''}
-                        ${hasChildren ? ' ▼' : ''}
+                        ${isCurrent ? '<i class="fas fa-star mr-1 text-[10px]"></i>' : ''}${m.prenom || ''} ${m.nom || ''}
+                        ${hasChildren ? ' <i class="fas fa-chevron-down text-[9px] opacity-50"></i>' : ''}
                     </span>`;
                 });
                 html += `</div>`;
-                
-                // Niveau 2 : Petits-enfants
+
                 const level2 = allMembers.filter(m => level1.some(parent => parent.id === m.parentId));
                 if (level2.length > 0) {
-                    html += `<div class="connector">├──</div>`;
                     html += `<div class="level">`;
                     level2.forEach(m => {
                         const isCurrent = m.id === memberId;
                         html += `<span class="node member ${isCurrent ? 'current' : ''}">
-                            ${isCurrent ? '⭐ ' : ''}${m.prenom || ''} ${m.nom || ''}
+                            ${isCurrent ? '<i class="fas fa-star mr-1 text-[10px]"></i>' : ''}${m.prenom || ''} ${m.nom || ''}
                         </span>`;
                     });
                     html += `</div>`;
                 }
             }
-            
-            // Légende
+
             html += `
-                <div class="mt-4 pt-3 border-t border-gray-200 flex flex-wrap gap-4 text-xs text-gray-500">
-                    <span><span class="inline-block w-3 h-3 rounded-full bg-purple-600 mr-1"></span> Racine</span>
-                    <span><span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-1"></span> Vous</span>
-                    <span><span class="inline-block w-3 h-3 rounded-full bg-gray-300 mr-1"></span> Membre</span>
-                    <span><span class="inline-block w-3 h-3 rounded-full bg-gray-100 border border-gray-300 mr-1"></span> A des enfants</span>
+                <div class="mt-6 pt-4 border-t border-slate-200 flex flex-wrap gap-4 text-xs text-slate-500">
+                    <span><span class="mini-legend-dot gradient-bg mr-1"></span> Racine</span>
+                    <span><span class="mini-legend-dot mr-1" style="background:#4f46e5;"></span> Vous</span>
+                    <span><span class="mini-legend-dot mr-1" style="background:#cbd5e1;"></span> Membre</span>
+                    <span><i class="fas fa-chevron-down text-slate-400 mr-1"></i> A des enfants</span>
                 </div>
             `;
-            
+
             container.innerHTML = html;
         }
 
@@ -608,8 +635,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             loadAllUsers();
-            
-            // Vérifier si un paramètre de recherche est passé dans l'URL
+
             const urlParams = new URLSearchParams(window.location.search);
             const searchParam = urlParams.get('q');
             if (searchParam) {
