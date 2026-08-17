@@ -399,6 +399,10 @@
             color: #94a3b8;
             margin-top: 3px;
         }
+        .sheet-form-group .password-visible {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
 
         @media (max-width: 768px) {
             .tree-children { gap: 18px; }
@@ -558,8 +562,10 @@
                         <div id="detailFields">
                             <div class="detail-field"><div class="label">Téléphone</div><div class="value" id="fieldTelephone"></div></div>
                             <div class="detail-field"><div class="label">Email</div><div class="value" id="fieldEmail"></div></div>
+                            <div class="detail-field"><div class="label">Email de récupération</div><div class="value" id="fieldRecoveryEmail"></div></div>
                             <div class="detail-field"><div class="label">ID SNEC</div><div class="value" id="fieldSnecId"></div></div>
                             <div class="detail-field"><div class="label">ID MLM Center</div><div class="value" id="fieldMlmId"></div></div>
+                            <div class="detail-field"><div class="label">Mot de passe MLM</div><div class="value" id="fieldMlmPassword"></div></div>
                             <div class="detail-field"><div class="label">Parrain</div><div class="value" id="fieldParrain"></div></div>
                             <div class="detail-field"><div class="label">Position</div><div class="value" id="fieldPosition"></div></div>
                         </div>
@@ -582,12 +588,20 @@
                                 <input type="email" id="editEmail" class="detail-input">
                             </div>
                             <div>
+                                <label class="text-xs font-semibold text-slate-500">Email de récupération</label>
+                                <input type="email" id="editRecoveryEmail" class="detail-input">
+                            </div>
+                            <div>
                                 <label class="text-xs font-semibold text-slate-500">ID SNEC</label>
                                 <input type="text" id="editSnecId" class="detail-input">
                             </div>
                             <div>
                                 <label class="text-xs font-semibold text-slate-500">ID MLM Center</label>
                                 <input type="text" id="editMlmId" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Mot de passe MLM</label>
+                                <input type="text" id="editMlmPassword" class="detail-input" style="font-family:'Courier New',monospace;letter-spacing:0.5px;">
                             </div>
                             <div>
                                 <label class="text-xs font-semibold text-slate-500">Statut</label>
@@ -701,6 +715,12 @@
                 </div>
 
                 <div class="sheet-form-group">
+                    <label>Email de récupération</label>
+                    <input type="email" id="addSheetRecoveryEmail" placeholder="recovery@exemple.com">
+                    <div class="hint">Email secondaire pour la récupération de compte</div>
+                </div>
+
+                <div class="sheet-form-group">
                     <label>ID SNEC</label>
                     <input type="text" id="addSheetSnecId" placeholder="SNEC-XXXXXX">
                     <div class="hint">Numéro d'identification SNEC</div>
@@ -714,8 +734,8 @@
 
                 <div class="sheet-form-group">
                     <label>MLM Center Password</label>
-                    <input type="password" id="addSheetMlmPassword" placeholder="Mot de passe MLM Center">
-                    <div class="hint">Mot de passe pour l'accès MLM Center</div>
+                    <input type="text" id="addSheetMlmPassword" placeholder="Mot de passe MLM Center" class="password-visible">
+                    <div class="hint">Mot de passe visible — pour l'accès MLM Center</div>
                 </div>
 
                 <div class="sheet-form-group">
@@ -876,6 +896,7 @@
                     m.nom?.toLowerCase().includes(searchTerm) ||
                     m.prenom?.toLowerCase().includes(searchTerm) ||
                     m.email?.toLowerCase().includes(searchTerm) ||
+                    m.recoveryEmail?.toLowerCase().includes(searchTerm) ||
                     m.telephone?.includes(searchTerm) ||
                     m.snecId?.toLowerCase().includes(searchTerm) ||
                     m.mlmId?.toLowerCase().includes(searchTerm)
@@ -1059,7 +1080,7 @@
 
         async function ajouterMembre(data) {
             const { 
-                nom, prenom, telephone, email, 
+                nom, prenom, telephone, email, recoveryEmail,
                 parrainEmail,
                 snecId, mlmId, mlmPassword 
             } = data;
@@ -1109,6 +1130,7 @@
                 prenom: prenom,
                 telephone: telephone,
                 email: email,
+                recoveryEmail: recoveryEmail || null,
                 snecId: snecId || null,
                 mlmId: mlmId || null,
                 mlmPassword: mlmPassword || null,
@@ -1181,8 +1203,10 @@
 
             document.getElementById('fieldTelephone').textContent = node.telephone || '---';
             document.getElementById('fieldEmail').textContent = node.email || '---';
+            document.getElementById('fieldRecoveryEmail').textContent = node.recoveryEmail || '---';
             document.getElementById('fieldSnecId').textContent = node.snecId || '---';
             document.getElementById('fieldMlmId').textContent = node.mlmId || '---';
+            document.getElementById('fieldMlmPassword').textContent = node.mlmPassword || '---';
             document.getElementById('fieldParrain').textContent = node.codeParrain || '-';
             document.getElementById('fieldPosition').textContent = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : 'Racine';
 
@@ -1238,8 +1262,10 @@
             document.getElementById('editNom').value = node.nom || '';
             document.getElementById('editTelephone').value = node.telephone || '';
             document.getElementById('editEmail').value = node.email || '';
+            document.getElementById('editRecoveryEmail').value = node.recoveryEmail || '';
             document.getElementById('editSnecId').value = node.snecId || '';
             document.getElementById('editMlmId').value = node.mlmId || '';
+            document.getElementById('editMlmPassword').value = node.mlmPassword || '';
             document.getElementById('editStatut').value = node.statut || 'actif';
 
             document.getElementById('detailFields').classList.add('hidden');
@@ -1274,8 +1300,10 @@
             const nom = document.getElementById('editNom').value.trim();
             const telephone = document.getElementById('editTelephone').value.trim();
             const email = document.getElementById('editEmail').value.trim();
+            const recoveryEmail = document.getElementById('editRecoveryEmail').value.trim();
             const snecId = document.getElementById('editSnecId').value.trim();
             const mlmId = document.getElementById('editMlmId').value.trim();
+            const mlmPassword = document.getElementById('editMlmPassword').value.trim();
             const statut = document.getElementById('editStatut').value;
 
             if (!prenom || !nom || !telephone || !email) {
@@ -1298,7 +1326,7 @@
                 }
 
                 await db.collection('users').doc(selectedMemberId).update({
-                    prenom, nom, telephone, email, snecId, mlmId, statut
+                    prenom, nom, telephone, email, recoveryEmail, snecId, mlmId, mlmPassword, statut
                 });
 
                 showToast('✅ Membre mis à jour', 'success');
@@ -1498,6 +1526,7 @@
             const prenom = document.getElementById('addSheetPrenom').value.trim();
             const telephone = document.getElementById('addSheetTelephone').value.trim();
             const email = document.getElementById('addSheetEmail').value.trim();
+            const recoveryEmail = document.getElementById('addSheetRecoveryEmail').value.trim();
             const snecId = document.getElementById('addSheetSnecId').value.trim();
             const mlmId = document.getElementById('addSheetMlmId').value.trim();
             const mlmPassword = document.getElementById('addSheetMlmPassword').value.trim();
@@ -1509,7 +1538,7 @@
             const btnText = document.getElementById('addSheetBtnText');
 
             if (!nom || !prenom || !telephone || !email) {
-                errorDiv.textContent = 'Tous les champs sont obligatoires (sauf email du parrain)';
+                errorDiv.textContent = 'Tous les champs sont obligatoires (sauf options)';
                 errorDiv.classList.remove('hidden');
                 return;
             }
@@ -1522,6 +1551,7 @@
             try {
                 const result = await ajouterMembre({
                     nom, prenom, telephone, email,
+                    recoveryEmail: recoveryEmail || null,
                     snecId: snecId || null,
                     mlmId: mlmId || null,
                     mlmPassword: mlmPassword || null,
