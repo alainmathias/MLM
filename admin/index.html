@@ -6,17 +6,29 @@
     <title>Admin - CommunityTree</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
 
     <style>
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        :root {
+            --line-color: #cbd5e1;
+            --line-color-strong: #94a3b8;
+            --ink: #1e293b;
+            --brand-1: #4f46e5;
+            --brand-2: #7c3aed;
+        }
+        * { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+
+        .gradient-bg { background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 100%); }
+        .modal-overlay { background: rgba(15,23,42,0.55); backdrop-filter: blur(4px); }
         .member-row:hover { background: #f8fafc; }
         .status-active { background: #dcfce7; color: #166534; }
         .status-suspended { background: #fee2e2; color: #991b1b; }
-        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; display: inline-block; letter-spacing: 0.2px; }
+
         .toast {
             position: fixed;
             bottom: 20px;
@@ -30,17 +42,316 @@
             opacity: 0;
             transition: all 0.5s ease;
             max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        .toast.show { transform: translateY(0); opacity: 1; }
         .toast-success { background: #16a34a; }
         .toast-error { background: #dc2626; }
         .toast-warning { background: #d97706; }
+
+        /* ===== TREE CONTAINER ===== */
+        .tree-container {
+            overflow: auto;
+            padding: 40px 24px;
+            background:
+                radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0) 0 0/24px 24px,
+                #f8fafc;
+            border-radius: 14px;
+            position: relative;
+            height: calc(100vh - 260px);
+            min-height: 460px;
+        }
+        .tree-wrapper {
+            display: flex;
+            justify-content: center;
+            justify-content: safe center;
+            align-items: flex-start;
+            min-width: 100%;
+            min-height: 100%;
+            transition: transform 0.3s ease;
+            transform-origin: center top;
+        }
+
+        /* ===== NODE ===== */
+        .tree-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.25s;
+        }
+        .tree-node-content {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px 18px 12px;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(15,23,42,0.06);
+            transition: all 0.25s;
+            position: relative;
+        }
+        .tree-node:hover > .tree-node-content {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px -8px rgba(30,41,59,0.18);
+            border-color: var(--brand-1);
+            z-index: 10;
+        }
+        .tree-node-content:not(.empty) { cursor: pointer; }
+        .tree-node-content.selected {
+            border-color: var(--brand-1);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.25), 0 12px 24px -8px rgba(30,41,59,0.18);
+        }
+        .tree-node-content.root.selected {
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.55), 0 10px 20px -6px rgba(79,70,229,0.45);
+        }
+        .gen-tag {
+            position: absolute;
+            top: -9px;
+            right: -9px;
+            background: #0f172a;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: 0.2px;
+        }
+        .tree-node-content.root .gen-tag { background: rgba(15,23,42,0.75); }
+        .node-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin: 0 auto 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #64748b, #475569);
+            letter-spacing: 0.5px;
+        }
+        .tree-node-content .node-name {
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+        .tree-node-content .node-code {
+            font-size: 10.5px;
+            color: #94a3b8;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+        }
+        .node-badges {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .badge {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            letter-spacing: 0.3px;
+        }
+        .badge-pos { background: #eef2ff; color: #4f46e5; }
+
+        .tree-node-content.root {
+            border: none;
+            background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+            color: white;
+            min-width: 150px;
+            box-shadow: 0 10px 20px -6px rgba(79,70,229,0.45);
+        }
+        .tree-node-content.root .node-avatar {
+            background: rgba(255,255,255,0.22);
+            border: 1.5px solid rgba(255,255,255,0.5);
+        }
+        .tree-node-content.root .node-name { color: #ffffff; font-size: 14.5px; }
+        .tree-node-content.root .node-code { color: rgba(255,255,255,0.75); }
+
+        /* ===== CONNECTORS ===== */
+        .tree-children {
+            display: flex;
+            justify-content: center;
+            gap: 36px;
+            margin-top: 30px;
+            padding-top: 30px;
+            position: relative;
+        }
+        .tree-children::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2.5px;
+            height: 16px;
+            background: var(--line-color-strong);
+            transform: translateX(-1.25px);
+        }
+        .tree-child {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding-top: 14px;
+        }
+        .tree-child::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            width: 2.5px;
+            height: 14px;
+            background: var(--line-color);
+            transform: translateX(-1.25px);
+        }
+        .tree-child::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            height: 2.5px;
+            background: var(--line-color);
+        }
+        .tree-child:first-child::after { left: 50%; width: 50%; }
+        .tree-child:last-child::after  { right: 50%; width: 50%; }
+        .tree-child:only-child::after  { left: 50%; width: 0; }
+
+        /* ===== FREE SLOT ===== */
+        .free-slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 130px;
+            min-height: 64px;
+            border: 1.5px dashed #c7d2fe;
+            border-radius: 16px;
+            background: #f5f5ff;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .free-slot:hover {
+            background: #eef2ff;
+            border-color: var(--brand-1);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px -8px rgba(79,70,229,0.3);
+        }
+        .free-slot .add-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #6366f1;
+        }
+        .free-slot:hover .add-btn { color: #4338ca; }
+        .free-slot .add-btn i { font-size: 20px; }
+        .free-slot .add-btn span { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
+
+        /* ===== ZOOM CONTROLS ===== */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: white;
+            padding: 4px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .zoom-btn:hover { background: #f1f5f9; color: #1e293b; }
+        .zoom-btn:active { transform: scale(0.92); }
+        .zoom-btn.primary { background: var(--brand-1); color: white; }
+        .zoom-btn.primary:hover { background: #4338ca; }
+        .zoom-level {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            min-width: 40px;
+            text-align: center;
+            user-select: none;
+        }
+
+        /* ===== MEMBER DETAILS — BOTTOM SHEET ===== */
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,0.55);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            z-index: 60;
+        }
+        .sheet-overlay.open { opacity: 1; pointer-events: auto; }
+        .member-sheet {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            background: #ffffff;
+            border-radius: 24px 24px 0 0;
+            max-height: 88vh;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.32s cubic-bezier(.32,.72,0,1);
+            z-index: 61;
+            box-shadow: 0 -12px 40px rgba(15,23,42,0.25);
+            padding: 14px 24px calc(24px + env(safe-area-inset-bottom));
+        }
+        .member-sheet.open { transform: translateY(0); }
+        .sheet-handle {
+            width: 40px;
+            height: 4px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            margin: 0 auto 16px;
+        }
+        .sheet-inner { max-width: 480px; margin: 0 auto; }
+        .detail-field { border-bottom: 1px solid #f1f5f9; padding: 10px 0; }
+        .detail-field:last-child { border-bottom: none; }
+        .detail-field .label { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
+        .detail-field .value { font-size: 14px; color: var(--ink); font-weight: 500; margin-top: 2px; }
+        .detail-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13.5px;
+            margin-top: 2px;
+            transition: all 0.2s;
+        }
+        .detail-input:focus { outline: none; border-color: var(--brand-1); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+
+        @media (max-width: 768px) {
+            .tree-children { gap: 18px; }
+            .tree-node-content { min-width: 92px; padding: 10px 12px; }
+            .node-avatar { width: 30px; height: 30px; font-size: 11px; }
+            .tree-node-content .node-name { font-size: 11.5px; }
+            .tree-node-content .node-code { font-size: 9.5px; }
+            .free-slot { min-width: 92px; min-height: 54px; }
+            .free-slot .add-btn i { font-size: 16px; }
+            .zoom-btn { width: 28px; height: 28px; font-size: 12px; }
+            .zoom-level { font-size: 10px; min-width: 32px; }
+        }
     </style>
 </head>
-<body>
+<body class="bg-slate-50">
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
@@ -60,108 +371,231 @@
     <div id="toast" class="toast"></div>
 
     <!-- Header -->
-    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30 border-b border-slate-100 rounded-b-2xl">
         <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
             <div class="flex items-center">
-                <i class="fas fa-tree text-blue-600 text-2xl mr-2"></i>
-                <span class="text-xl font-bold text-gray-800">CommunityTree</span>
-                <span class="ml-3 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Admin</span>
+                <div class="w-9 h-9 rounded-xl gradient-bg flex items-center justify-center mr-2">
+                    <i class="fas fa-tree text-white text-sm"></i>
+                </div>
+                <span class="text-xl font-bold text-slate-800 tracking-tight">CommunityTree</span>
+                <span class="ml-3 text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full">Admin</span>
             </div>
-            <a href="index.html" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-home"></i> Accueil
+            <a href="index.html" class="text-slate-400 hover:text-slate-700 transition text-sm font-medium">
+                <i class="fas fa-home mr-1"></i> Accueil
             </a>
         </div>
     </header>
 
     <main class="pt-20 px-4 pb-8 max-w-6xl mx-auto">
         <!-- Vérification mot de passe -->
-        <div id="loginAdmin" class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow-xl p-8">
+        <div id="loginAdmin" class="max-w-md mx-auto mt-10 bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
             <div class="text-center mb-6">
-                <i class="fas fa-lock text-4xl text-purple-600 mb-3"></i>
-                <h2 class="text-2xl font-bold text-gray-800">Accès Admin</h2>
-                <p class="text-gray-500 text-sm">Entrez le mot de passe pour continuer</p>
+                <div class="w-16 h-16 rounded-2xl gradient-bg flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-lock text-white text-xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Accès Admin</h2>
+                <p class="text-slate-500 text-sm mt-1">Entrez le mot de passe pour continuer</p>
             </div>
             <form id="adminLoginForm">
-                <input type="password" id="adminPassword" placeholder="Mot de passe" 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none mb-4">
-                <button type="submit" class="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                <input type="password" id="adminPassword" placeholder="Mot de passe"
+                       class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none mb-4 transition">
+                <button type="submit" class="w-full py-3 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200">
                     <i class="fas fa-unlock mr-2"></i> Accéder
                 </button>
                 <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden">Mot de passe incorrect</p>
             </form>
         </div>
 
-        <!-- Contenu Admin (caché) -->
+        <!-- Contenu Admin -->
         <div id="adminContent" class="hidden">
-            <!-- Stats rapides -->
+            <!-- Stats -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Total</p>
-                    <p class="text-2xl font-bold text-gray-800" id="totalMembres">0</p>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Total</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1" id="totalMembres">0</p>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Actifs</p>
-                    <p class="text-2xl font-bold text-green-600" id="actifsMembres">0</p>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Actifs</p>
+                    <p class="text-2xl font-bold text-emerald-600 mt-1" id="actifsMembres">0</p>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Suspendus</p>
-                    <p class="text-2xl font-bold text-red-600" id="suspendusMembres">0</p>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Suspendus</p>
+                    <p class="text-2xl font-bold text-red-600 mt-1" id="suspendusMembres">0</p>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-sm text-gray-500">Niveaux</p>
-                    <p class="text-2xl font-bold text-purple-600" id="niveauxArbre">0</p>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Niveaux</p>
+                    <p class="text-2xl font-bold text-indigo-600 mt-1" id="niveauxArbre">0</p>
                 </div>
             </div>
 
-            <!-- Ajouter un membre -->
-            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-user-plus text-blue-600 mr-2"></i> Ajouter un membre
-                </h2>
-                
-                <!-- Indication pour le code parrain -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    Vous pouvez entrer soit le <strong>code</strong> (ex: MB000001) soit l'<strong>email</strong> du parrain
+            <!-- Arbre -->
+            <div class="tree-card bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h2 class="text-lg font-bold text-slate-800">
+                        <i class="fas fa-sitemap text-indigo-600 mr-2"></i> Arbre — cliquez sur un membre ou une place libre
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <div class="zoom-controls">
+                            <button id="zoomOutBtn" class="zoom-btn" title="Dézoomer">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <span class="zoom-level" id="zoomLevel">100%</span>
+                            <button id="zoomInBtn" class="zoom-btn" title="Zoomer">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button id="resetZoomBtn" class="zoom-btn primary" title="Réinitialiser">
+                                <i class="fas fa-compress"></i>
+                            </button>
+                        </div>
+                        <button id="refreshTree" class="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition text-sm font-medium">
+                            <i class="fas fa-sync-alt mr-1.5"></i> Rafraîchir
+                        </button>
+                    </div>
                 </div>
+                <div class="tree-container" id="treeContainer">
+                    <div class="tree-wrapper" id="treeWrapper">
+                        <div id="treeContent" class="flex flex-col items-center">
+                            <div class="text-slate-400 text-center py-6">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                <p>Chargement de l'arbre...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-slate-400 text-center">
+                    <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette — la zone reste scrollable à 100%
+                </div>
+            </div>
 
+            <!-- Sheet de détails membre -->
+            <div id="sheetOverlay" class="sheet-overlay" onclick="closeMemberDetails()"></div>
+            <div id="memberSheet" class="member-sheet">
+                <div class="sheet-inner">
+                    <div class="sheet-handle"></div>
+                    <div id="detailsView">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="node-avatar" style="width:44px;height:44px;font-size:15px;margin:0;" id="detailAvatar"></div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-base leading-tight" id="detailName"></p>
+                                    <p class="text-xs text-slate-400" id="detailEmailTop"></p>
+                                </div>
+                            </div>
+                            <button onclick="closeMemberDetails()" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex gap-2 mb-4">
+                            <span class="badge badge-pos" id="detailGen"></span>
+                            <span class="status-badge" id="detailStatus"></span>
+                        </div>
+
+                        <div id="detailFields">
+                            <div class="detail-field"><div class="label">Téléphone</div><div class="value" id="fieldTelephone"></div></div>
+                            <div class="detail-field"><div class="label">Email</div><div class="value" id="fieldEmail"></div></div>
+                            <div class="detail-field"><div class="label">Parrain</div><div class="value" id="fieldParrain"></div></div>
+                            <div class="detail-field"><div class="label">Position</div><div class="value" id="fieldPosition"></div></div>
+                        </div>
+
+                        <div id="detailEditForm" class="hidden space-y-3 mt-2">
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Prénom</label>
+                                <input type="text" id="editPrenom" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Nom</label>
+                                <input type="text" id="editNom" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Téléphone</label>
+                                <input type="tel" id="editTelephone" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Email</label>
+                                <input type="email" id="editEmail" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">Statut</label>
+                                <select id="editStatut" class="detail-input">
+                                    <option value="actif">Actif</option>
+                                    <option value="suspendu">Suspendu</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="detailEditError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs mt-3"></div>
+
+                        <div class="mt-5 hidden gap-2" id="detailActionsView">
+                            <button onclick="enableEditMode()" class="flex-1 py-2.5 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition text-sm font-medium">
+                                <i class="fas fa-pen mr-1.5"></i> Modifier
+                            </button>
+                            <button onclick="deleteMember()" class="flex-1 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition text-sm font-medium">
+                                <i class="fas fa-trash mr-1.5"></i> Supprimer
+                            </button>
+                        </div>
+
+                        <div class="mt-5 hidden gap-2" id="detailActionsEdit">
+                            <button onclick="saveMemberEdit()" class="flex-1 py-2.5 gradient-bg text-white rounded-xl hover:opacity-90 transition text-sm font-medium">
+                                <i class="fas fa-check mr-1.5"></i> Enregistrer
+                            </button>
+                            <button onclick="cancelEditMode()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition text-sm font-medium">
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire -->
+            <div id="addMemberSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">
+                    <i class="fas fa-user-plus text-indigo-600 mr-2"></i> Ajouter un membre
+                    <span id="parentInfo" class="text-sm font-normal text-slate-400"></span>
+                </h2>
                 <form id="addMemberForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="text" id="nom" placeholder="Nom *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <input type="text" id="prenom" placeholder="Prénom *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <input type="tel" id="telephone" placeholder="Téléphone *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <input type="email" id="email" placeholder="Email *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <input type="text" id="codeParrain" placeholder="Code OU Email du parrain *" required 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <input type="hidden" id="parentIdField" value="">
+                    <input type="hidden" id="positionField" value="">
+                    <input type="text" id="nom" placeholder="Nom *" required
+                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    <input type="text" id="prenom" placeholder="Prénom *" required
+                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    <input type="tel" id="telephone" placeholder="Téléphone *" required
+                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    <input type="email" id="email" placeholder="Email *" required
+                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    <input type="text" id="codeParrain" placeholder="Code parrain (auto)"
+                           class="px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none text-slate-400" readonly>
+                    <button type="submit" class="px-6 py-2.5 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200">
                         <i class="fas fa-plus mr-2"></i> Ajouter
                     </button>
                 </form>
                 <div id="formMessage" class="mt-3 text-sm hidden"></div>
             </div>
 
-            <!-- Liste des membres -->
-            <div class="bg-white rounded-2xl shadow-lg p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-users text-blue-600 mr-2"></i> Membres
+            <!-- Liste -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                    <h2 class="text-lg font-bold text-slate-800">
+                        <i class="fas fa-users text-indigo-600 mr-2"></i> Membres
+                        <span id="memberCount" class="text-sm font-normal text-slate-400"></span>
                     </h2>
-                    <input type="text" id="searchMember" placeholder="Rechercher..." 
-                           class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
+                        <input type="text" id="searchMember" placeholder="Rechercher..."
+                               class="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
-                        <thead class="text-gray-500 border-b">
+                        <thead class="text-slate-400 border-b border-slate-100">
                             <tr>
-                                <th class="text-left py-2">Code</th>
-                                <th class="text-left py-2 hidden md:table-cell">Nom</th>
-                                <th class="text-left py-2">Email</th>
-                                <th class="text-left py-2 hidden lg:table-cell">Parrain</th>
-                                <th class="text-left py-2">Statut</th>
-                                <th class="text-right py-2">Actions</th>
+                                <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Nom</th>
+                                <th class="text-left py-2.5 hidden md:table-cell font-semibold text-xs uppercase tracking-wide">Prénom</th>
+                                <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Email</th>
+                                <th class="text-left py-2.5 hidden lg:table-cell font-semibold text-xs uppercase tracking-wide">Numéro</th>
+                                <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Statut</th>
+                                <th class="text-right py-2.5 font-semibold text-xs uppercase tracking-wide">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="membersList"></tbody>
@@ -171,25 +605,134 @@
         </div>
     </main>
 
+    <!-- Modal -->
+    <div id="addModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeAddModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-slate-800">
+                    <i class="fas fa-user-plus text-indigo-600 mr-2"></i> Ajouter un filleul
+                </h3>
+                <button onclick="closeAddModal()" class="text-slate-300 hover:text-slate-600 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <p class="text-sm text-slate-500 mb-4 bg-slate-50 rounded-lg px-3 py-2" id="modalParentInfo">Position sous: ...</p>
+            <form id="modalAddForm" class="space-y-4">
+                <input type="hidden" id="modalParentId" value="">
+                <input type="hidden" id="modalPosition" value="">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600">Nom *</label>
+                        <input type="text" id="modalNom" required
+                               class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600">Prénom *</label>
+                        <input type="text" id="modalPrenom" required
+                               class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600">Téléphone *</label>
+                    <input type="tel" id="modalTelephone" required
+                           class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600">Email *</label>
+                    <input type="email" id="modalEmail" required
+                           class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                </div>
+                <div id="modalError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+                <button type="submit" class="w-full py-3 px-4 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200">
+                    <i class="fas fa-spinner fa-spin hidden mr-2" id="modalLoading"></i>
+                    <span id="modalBtnText">Ajouter le filleul</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script>
         // ============================================
-        // TOAST NOTIFICATION
+        // TOAST
         // ============================================
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = `toast toast-${type} show`;
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 4000);
+            setTimeout(() => toast.classList.remove('show'), 4000);
         }
+
+        // ============================================
+        // ZOOM
+        // ============================================
+
+        let currentZoom = 1;
+        const MIN_ZOOM = 0.3;
+        const MAX_ZOOM = 2.5;
+        const ZOOM_STEP = 0.1;
+
+        function updateZoom() {
+            const wrapper = document.getElementById('treeWrapper');
+            wrapper.style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+            adjustTreeAlignment();
+        }
+
+        // Filet de sécurité pour les navigateurs sans support de "safe center" :
+        // si le contenu déborde le conteneur, on aligne à gauche pour garder
+        // tout le contenu accessible au scroll (sinon la partie gauche reste
+        // hors d'atteinte car scrollLeft ne peut pas être négatif).
+        function adjustTreeAlignment() {
+            const wrapper = document.getElementById('treeWrapper');
+            const container = document.getElementById('treeContainer');
+            if (!wrapper || !container) return;
+            requestAnimationFrame(() => {
+                const overflowing = wrapper.scrollWidth > container.clientWidth + 1;
+                wrapper.style.justifyContent = overflowing ? 'flex-start' : 'center';
+            });
+        }
+
+        function zoomIn() {
+            if (currentZoom < MAX_ZOOM) {
+                currentZoom = Math.min(currentZoom + ZOOM_STEP, MAX_ZOOM);
+                updateZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > MIN_ZOOM) {
+                currentZoom = Math.max(currentZoom - ZOOM_STEP, MIN_ZOOM);
+                updateZoom();
+            }
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            updateZoom();
+        }
+
+        document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
+        document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
+        document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
+
+        document.getElementById('treeContainer').addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    zoomIn();
+                } else {
+                    zoomOut();
+                }
+            }
+        }, { passive: false });
 
         // ============================================
         // ADMIN LOGIN
         // ============================================
 
-        const ADMIN_PASSWORD = "admin123"; // À changer !
+        const ADMIN_PASSWORD = "admin123";
 
         document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -204,192 +747,226 @@
         });
 
         // ============================================
-        // FONCTIONS DE L'ADMIN
+        // VARIABLES
         // ============================================
 
         let allMembers = [];
+        let usersMap = {};
+        let currentSearchTerm = '';
+        let selectedMemberId = null;
+        let currentGenMap = {};
+
+        // ============================================
+        // HELPERS
+        // ============================================
+
+        function getInitials(prenom, nom) {
+            const a = (prenom || '?').trim().charAt(0).toUpperCase();
+            const b = (nom || '?').trim().charAt(0).toUpperCase();
+            return `${a}${b}`;
+        }
+
+        // ============================================
+        // LOAD ADMIN DATA
+        // ============================================
 
         async function loadAdminData() {
             await loadMembers();
             await loadStats();
+            await loadTree();
         }
+
+        // ============================================
+        // LOAD MEMBERS
+        // ============================================
 
         async function loadMembers() {
             try {
                 const snapshot = await db.collection('users').get();
                 allMembers = [];
+                usersMap = {};
                 snapshot.forEach(doc => {
-                    allMembers.push({ id: doc.id, ...doc.data() });
+                    const data = doc.data();
+                    allMembers.push({ id: doc.id, ...data });
+                    usersMap[doc.id] = { id: doc.id, ...data };
                 });
-                renderMembers(allMembers);
+                applySearchFilter();
+                document.getElementById('memberCount').textContent = `(${allMembers.length})`;
             } catch (error) {
                 console.error('Erreur chargement membres:', error);
                 showToast('Erreur chargement des membres', 'error');
             }
         }
 
+        // ============================================
+        // RECHERCHE
+        // ============================================
+
+        function applySearchFilter() {
+            const searchTerm = currentSearchTerm.toLowerCase().trim();
+            let filtered = allMembers;
+
+            if (searchTerm) {
+                filtered = allMembers.filter(m =>
+                    m.codeMembre?.toLowerCase().includes(searchTerm) ||
+                    m.nom?.toLowerCase().includes(searchTerm) ||
+                    m.prenom?.toLowerCase().includes(searchTerm) ||
+                    m.email?.toLowerCase().includes(searchTerm) ||
+                    m.telephone?.includes(searchTerm)
+                );
+            }
+
+            renderMembers(filtered);
+        }
+
+        document.getElementById('searchMember').addEventListener('input', function() {
+            currentSearchTerm = this.value;
+            applySearchFilter();
+        });
+
+        // ============================================
+        // RENDER MEMBERS
+        // ============================================
+
         function renderMembers(members) {
             const tbody = document.getElementById('membersList');
             if (members.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Aucun membre</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">Aucun membre trouvé</td></tr>`;
                 return;
             }
             tbody.innerHTML = members.map(m => `
-                <tr class="member-row border-b">
-                    <td class="py-2 font-mono text-sm">${m.codeMembre || '---'}</td>
-                    <td class="py-2 hidden md:table-cell">${m.prenom || ''} ${m.nom || ''}</td>
-                    <td class="py-2 text-sm">${m.email || '---'}</td>
-                    <td class="py-2 hidden lg:table-cell">${m.codeParrain || '-'}</td>
-                    <td class="py-2">
+                <tr class="member-row border-b border-slate-50 transition">
+                    <td class="py-3 font-medium text-slate-700">${m.nom || '---'}</td>
+                    <td class="py-3 hidden md:table-cell text-slate-600">${m.prenom || '---'}</td>
+                    <td class="py-3 text-slate-500">${m.email || '---'}</td>
+                    <td class="py-3 hidden lg:table-cell text-slate-500">${m.telephone || '---'}</td>
+                    <td class="py-3">
                         <span class="status-badge ${m.statut === 'actif' ? 'status-active' : 'status-suspended'}">
                             ${m.statut === 'actif' ? 'Actif' : 'Suspendu'}
                         </span>
                     </td>
-                    <td class="py-2 text-right">
-                        <button onclick="toggleStatus('${m.id}')" class="text-yellow-500 hover:text-yellow-700 mx-1">
-                            <i class="fas ${m.statut === 'actif' ? 'fa-pause' : 'fa-play'}"></i>
+                    <td class="py-3 text-right">
+                        <button onclick="toggleStatus('${m.id}')" class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-amber-500 hover:bg-amber-50 transition">
+                            <i class="fas ${m.statut === 'actif' ? 'fa-pause' : 'fa-play'} text-xs"></i>
                         </button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // Recherche
-        document.getElementById('searchMember').addEventListener('input', function() {
-            const search = this.value.toLowerCase();
-            const filtered = allMembers.filter(m => 
-                m.codeMembre?.toLowerCase().includes(search) ||
-                m.nom?.toLowerCase().includes(search) ||
-                m.prenom?.toLowerCase().includes(search) ||
-                m.email?.toLowerCase().includes(search)
-            );
-            renderMembers(filtered);
-        });
-
         // ============================================
-        // AJOUT D'UN MEMBRE (AVEC EMAIL OU CODE)
+        // LOAD STATS
         // ============================================
 
-        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const nom = document.getElementById('nom').value.trim();
-            const prenom = document.getElementById('prenom').value.trim();
-            const telephone = document.getElementById('telephone').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const parrainInput = document.getElementById('codeParrain').value.trim();
-
-            const message = document.getElementById('formMessage');
-
-            if (!nom || !prenom || !telephone || !email || !parrainInput) {
-                message.className = 'mt-3 text-sm text-red-600';
-                message.textContent = 'Tous les champs sont obligatoires';
-                message.classList.remove('hidden');
-                return;
-            }
-
+        async function loadStats() {
             try {
-                // === 1. RECHERCHER LE PARRAIN ===
-                // Par code OU par email
-                let parrainQuery = await db.collection('users')
-                    .where('codeMembre', '==', parrainInput)
-                    .limit(1)
-                    .get();
+                const snapshot = await db.collection('users').get();
+                let total = 0, actifs = 0, suspendus = 0;
 
-                // Si pas trouvé par code, chercher par email
-                if (parrainQuery.empty) {
-                    parrainQuery = await db.collection('users')
-                        .where('email', '==', parrainInput)
-                        .limit(1)
-                        .get();
-                }
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    total++;
+                    if (data.statut === 'actif') actifs++;
+                    if (data.statut === 'suspendu') suspendus++;
+                });
 
-                if (parrainQuery.empty) {
-                    message.className = 'mt-3 text-sm text-red-600';
-                    message.textContent = '❌ Parrain non trouvé (vérifiez le code ou l\'email)';
-                    message.classList.remove('hidden');
-                    return;
-                }
+                document.getElementById('totalMembres').textContent = total;
+                document.getElementById('actifsMembres').textContent = actifs;
+                document.getElementById('suspendusMembres').textContent = suspendus;
 
-                const parrainDoc = parrainQuery.docs[0];
-                const parrainData = parrainDoc.data();
-
-                // === 2. VÉRIFIER SI LE MEMBRE EXISTE DÉJÀ ===
-                const emailCheck = await db.collection('users')
-                    .where('email', '==', email)
-                    .limit(1)
-                    .get();
-
-                if (!emailCheck.empty) {
-                    message.className = 'mt-3 text-sm text-red-600';
-                    message.textContent = '❌ Un membre avec cet email existe déjà';
-                    message.classList.remove('hidden');
-                    return;
-                }
-
-                // === 3. GÉNÉRER LE CODE ===
-                const codeMembre = await generateMemberCode();
-
-                // === 4. TROUVER LA POSITION ===
+                let niveaux = 0;
                 const rootId = await findRoot();
-                let parentId = null, position = null;
-
                 if (rootId) {
-                    const pos = await findNextAvailablePosition(rootId);
-                    parentId = pos.parentId;
-                    position = pos.position;
+                    const queue = [{ id: rootId, level: 0 }];
+                    const visited = new Set();
+                    while (queue.length > 0) {
+                        const { id, level } = queue.shift();
+                        if (visited.has(id)) continue;
+                        visited.add(id);
+                        if (level > niveaux) niveaux = level;
+
+                        const data = usersMap[id];
+                        if (data) {
+                            if (data.leftChildId) queue.push({ id: data.leftChildId, level: level + 1 });
+                            if (data.rightChildId) queue.push({ id: data.rightChildId, level: level + 1 });
+                        }
+                    }
                 }
-
-                // === 5. CRÉER LE MEMBRE ===
-                const userData = {
-                    codeMembre: codeMembre,
-                    nom: nom,
-                    prenom: prenom,
-                    telephone: telephone,
-                    email: email,
-                    codeParrain: parrainData.codeMembre, // On stocke le code du parrain
-                    parrainId: parrainDoc.id,
-                    parentId: parentId,
-                    position: position,
-                    leftChildId: null,
-                    rightChildId: null,
-                    dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
-                    statut: 'actif'
-                };
-
-                console.log('Ajout du membre:', userData);
-
-                // === 6. SAUVEGARDER ===
-                const docRef = await db.collection('users').add(userData);
-
-                // === 7. METTRE À JOUR LE PARENT ===
-                if (parentId) {
-                    const updateData = {};
-                    updateData[position === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
-                    await db.collection('users').doc(parentId).update(updateData);
-                }
-
-                message.className = 'mt-3 text-sm text-green-600';
-                message.textContent = '✅ Membre ajouté ! Code: ' + codeMembre;
-                message.classList.remove('hidden');
-                
-                showToast('✅ Membre ' + prenom + ' ' + nom + ' ajouté ! Code: ' + codeMembre, 'success');
-                
-                document.getElementById('addMemberForm').reset();
-                await loadMembers();
-                await loadStats();
+                document.getElementById('niveauxArbre').textContent = niveaux + 1;
 
             } catch (error) {
-                console.error('Erreur détaillée:', error);
-                message.className = 'mt-3 text-sm text-red-600';
-                message.textContent = '❌ Erreur: ' + error.message;
-                message.classList.remove('hidden');
-                showToast('❌ Erreur: ' + error.message, 'error');
+                console.error('Erreur stats:', error);
             }
-        });
+        }
 
         // ============================================
-        // FONCTIONS UTILITAIRES
+        // FIND ROOT
+        // ============================================
+
+        async function findRoot() {
+            try {
+                const query = await db.collection('users')
+                    .where('position', '==', null)
+                    .limit(1)
+                    .get();
+
+                if (!query.empty) {
+                    return query.docs[0].id;
+                }
+
+                const first = await db.collection('users')
+                    .orderBy('dateInscription')
+                    .limit(1)
+                    .get();
+
+                return first.empty ? null : first.docs[0].id;
+            } catch (error) {
+                console.error('Erreur findRoot:', error);
+                return null;
+            }
+        }
+
+        // ============================================
+        // FIND NEXT AVAILABLE POSITION (BFS)
+        // ============================================
+
+        async function findNextAvailablePosition(rootId) {
+            if (!rootId) {
+                return { parentId: null, position: null };
+            }
+
+            const queue = [rootId];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+
+                if (visited.has(currentId)) continue;
+                visited.add(currentId);
+
+                const data = usersMap[currentId];
+                if (!data) continue;
+
+                if (!data.leftChildId) {
+                    return { parentId: currentId, position: 'left' };
+                }
+                if (data.leftChildId && !visited.has(data.leftChildId)) {
+                    queue.push(data.leftChildId);
+                }
+
+                if (!data.rightChildId) {
+                    return { parentId: currentId, position: 'right' };
+                }
+                if (data.rightChildId && !visited.has(data.rightChildId)) {
+                    queue.push(data.rightChildId);
+                }
+            }
+
+            return { parentId: rootId, position: 'left' };
+        }
+
+        // ============================================
+        // GENERATE MEMBER CODE
         // ============================================
 
         async function generateMemberCode() {
@@ -404,126 +981,518 @@
                 });
                 return `MB${String(result).padStart(6, '0')}`;
             } catch (error) {
-                console.error('Erreur code:', error);
-                // Fallback : générer un code aléatoire
+                console.error('Erreur génération code:', error);
                 const random = Math.floor(Math.random() * 1000000);
                 return `MB${String(random).padStart(6, '0')}`;
             }
         }
 
-        async function findRoot() {
-            try {
-                const query = await db.collection('users').where('position', '==', null).limit(1).get();
-                if (!query.empty) return query.docs[0].id;
-                
-                const first = await db.collection('users').orderBy('dateInscription').limit(1).get();
-                return first.empty ? null : first.docs[0].id;
-            } catch (error) {
-                console.error('Erreur findRoot:', error);
-                return null;
-            }
-        }
-
-        async function findNextAvailablePosition(rootId) {
-            const queue = [rootId];
-            const visited = new Set();
-            
-            while (queue.length > 0) {
-                const currentId = queue.shift();
-                if (visited.has(currentId)) continue;
-                visited.add(currentId);
-                
-                try {
-                    const doc = await db.collection('users').doc(currentId).get();
-                    if (!doc.exists) continue;
-                    const data = doc.data();
-                    
-                    if (!data.leftChildId) {
-                        return { parentId: currentId, position: 'left' };
-                    }
-                    queue.push(data.leftChildId);
-                    
-                    if (!data.rightChildId) {
-                        return { parentId: currentId, position: 'right' };
-                    }
-                    queue.push(data.rightChildId);
-                } catch (error) {
-                    console.error('Erreur BFS:', error);
-                }
-            }
-            return { parentId: rootId, position: 'left' };
-        }
-
         // ============================================
-        // STATS
+        // AJOUTER MEMBRE
         // ============================================
 
-        async function loadStats() {
-            try {
-                const snapshot = await db.collection('users').get();
-                let total = 0, actifs = 0, suspendus = 0;
-                let niveaux = 0;
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    total++;
-                    if (data.statut === 'actif') actifs++;
-                    if (data.statut === 'suspendu') suspendus++;
-                });
+        async function ajouterMembre(data) {
+            const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
 
-                document.getElementById('totalMembres').textContent = total;
-                document.getElementById('actifsMembres').textContent = actifs;
-                document.getElementById('suspendusMembres').textContent = suspendus;
+            const emailCheck = await db.collection('users')
+                .where('email', '==', email)
+                .limit(1)
+                .get();
 
-                // Calcul des niveaux (simplifié)
+            if (!emailCheck.empty) {
+                throw new Error('Cet email est déjà utilisé');
+            }
+
+            const codeMembre = await generateMemberCode();
+
+            let finalParentId = parentId;
+            let finalPosition = position;
+
+            if (!finalParentId) {
                 const rootId = await findRoot();
-                if (rootId) {
-                    const queue = [{ id: rootId, level: 0 }];
-                    const visited = new Set();
-                    while (queue.length > 0) {
-                        const { id, level } = queue.shift();
-                        if (visited.has(id)) continue;
-                        visited.add(id);
-                        if (level > niveaux) niveaux = level;
-                        
-                        try {
-                            const doc = await db.collection('users').doc(id).get();
-                            if (doc.exists) {
-                                const data = doc.data();
-                                if (data.leftChildId) queue.push({ id: data.leftChildId, level: level + 1 });
-                                if (data.rightChildId) queue.push({ id: data.rightChildId, level: level + 1 });
-                            }
-                        } catch (error) {
-                            console.error('Erreur niveau:', error);
-                        }
-                    }
+                if (!rootId) {
+                    finalParentId = null;
+                    finalPosition = null;
+                } else {
+                    const pos = await findNextAvailablePosition(rootId);
+                    finalParentId = pos.parentId;
+                    finalPosition = pos.position;
                 }
-                document.getElementById('niveauxArbre').textContent = niveaux + 1;
-
-            } catch (error) {
-                console.error('Erreur stats:', error);
             }
+
+            let parrainCode = codeParrain;
+            let parrainId = null;
+
+            if (finalParentId) {
+                const parentData = usersMap[finalParentId];
+                if (parentData) {
+                    parrainCode = parentData.codeMembre;
+                    parrainId = finalParentId;
+                }
+            }
+
+            const userData = {
+                codeMembre: codeMembre,
+                nom: nom,
+                prenom: prenom,
+                telephone: telephone,
+                email: email,
+                codeParrain: parrainCode,
+                parrainId: parrainId,
+                parentId: finalParentId,
+                position: finalPosition,
+                leftChildId: null,
+                rightChildId: null,
+                dateInscription: firebase.firestore.FieldValue.serverTimestamp(),
+                statut: 'actif'
+            };
+
+            const docRef = await db.collection('users').add(userData);
+
+            if (finalParentId) {
+                const updateData = {};
+                updateData[finalPosition === 'left' ? 'leftChildId' : 'rightChildId'] = docRef.id;
+                await db.collection('users').doc(finalParentId).update(updateData);
+            }
+
+            usersMap[docRef.id] = { id: docRef.id, ...userData };
+
+            return {
+                success: true,
+                id: docRef.id,
+                codeMembre: codeMembre
+            };
         }
 
         // ============================================
-        // CHANGER STATUT
+        // TOGGLE STATUS
         // ============================================
 
-        window.toggleStatus = async function(id) {
+        async function toggleStatus(id) {
             try {
                 const doc = await db.collection('users').doc(id).get();
                 if (!doc.exists) return;
                 const current = doc.data().statut;
                 const newStatus = current === 'actif' ? 'suspendu' : 'actif';
                 await db.collection('users').doc(id).update({ statut: newStatus });
-                await loadMembers();
-                await loadStats();
+                await loadAdminData();
                 showToast('Statut mis à jour', 'success');
             } catch (error) {
-                console.error('Erreur:', error);
-                showToast('Erreur lors du changement de statut', 'error');
+                showToast('Erreur', 'error');
             }
-        };
+        }
+
+        // ============================================
+        // DÉTAILS MEMBRE (BOTTOM SHEET)
+        // ============================================
+
+        let sheetOpen = false;
+
+        function showMemberDetails(id) {
+            const node = usersMap[id];
+            if (!node) return;
+
+            selectedMemberId = id;
+
+            document.getElementById('detailAvatar').textContent = getInitials(node.prenom, node.nom);
+            document.getElementById('detailName').textContent = `${node.prenom || '?'} ${node.nom || '?'}`;
+            document.getElementById('detailEmailTop').textContent = node.email || '---';
+            document.getElementById('detailGen').textContent = `Génération ${currentGenMap[id] || 1}`;
+
+            const statusEl = document.getElementById('detailStatus');
+            statusEl.textContent = node.statut === 'actif' ? 'Actif' : 'Suspendu';
+            statusEl.className = `status-badge ${node.statut === 'actif' ? 'status-active' : 'status-suspended'}`;
+
+            document.getElementById('fieldTelephone').textContent = node.telephone || '---';
+            document.getElementById('fieldEmail').textContent = node.email || '---';
+            document.getElementById('fieldParrain').textContent = node.codeParrain || '-';
+            document.getElementById('fieldPosition').textContent = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : 'Racine';
+
+            cancelEditMode();
+            renderTreeOnly();
+            openSheetUI();
+        }
+
+        function openSheetUI() {
+            document.getElementById('sheetOverlay').classList.add('open');
+            document.getElementById('memberSheet').classList.add('open');
+            if (!sheetOpen) {
+                sheetOpen = true;
+                history.pushState({ memberSheet: true }, '');
+            }
+        }
+
+        function closeSheetUI() {
+            sheetOpen = false;
+            document.getElementById('sheetOverlay').classList.remove('open');
+            document.getElementById('memberSheet').classList.remove('open');
+            selectedMemberId = null;
+            renderTreeOnly();
+        }
+
+        function closeMemberDetails() {
+            if (sheetOpen) {
+                history.back();
+            }
+        }
+
+        window.addEventListener('popstate', function() {
+            if (sheetOpen) closeSheetUI();
+        });
+
+        window.addEventListener('resize', function() {
+            adjustTreeAlignment();
+        });
+
+        function renderTreeOnly() {
+            let rootId = null;
+            for (const [id, data] of Object.entries(usersMap)) {
+                if (!data.position) { rootId = id; break; }
+            }
+            currentGenMap = {};
+            const container = document.getElementById('treeContent');
+            if (rootId && usersMap[rootId]) {
+                container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
+            }
+            adjustTreeAlignment();
+        }
+
+        function enableEditMode() {
+            const node = usersMap[selectedMemberId];
+            if (!node) return;
+
+            document.getElementById('editPrenom').value = node.prenom || '';
+            document.getElementById('editNom').value = node.nom || '';
+            document.getElementById('editTelephone').value = node.telephone || '';
+            document.getElementById('editEmail').value = node.email || '';
+            document.getElementById('editStatut').value = node.statut || 'actif';
+
+            document.getElementById('detailFields').classList.add('hidden');
+            document.getElementById('detailEditForm').classList.remove('hidden');
+            document.getElementById('detailEditForm').classList.add('flex', 'flex-col');
+
+            document.getElementById('detailActionsView').classList.add('hidden');
+            document.getElementById('detailActionsView').classList.remove('flex');
+            document.getElementById('detailActionsEdit').classList.remove('hidden');
+            document.getElementById('detailActionsEdit').classList.add('flex');
+            document.getElementById('detailEditError').classList.add('hidden');
+        }
+
+        function cancelEditMode() {
+            document.getElementById('detailFields').classList.remove('hidden');
+            document.getElementById('detailEditForm').classList.add('hidden');
+            document.getElementById('detailEditForm').classList.remove('flex', 'flex-col');
+
+            document.getElementById('detailActionsView').classList.remove('hidden');
+            document.getElementById('detailActionsView').classList.add('flex');
+            document.getElementById('detailActionsEdit').classList.add('hidden');
+            document.getElementById('detailActionsEdit').classList.remove('flex');
+            document.getElementById('detailEditError').classList.add('hidden');
+        }
+
+        async function saveMemberEdit() {
+            if (!selectedMemberId) return;
+            const errorDiv = document.getElementById('detailEditError');
+            errorDiv.classList.add('hidden');
+
+            const prenom = document.getElementById('editPrenom').value.trim();
+            const nom = document.getElementById('editNom').value.trim();
+            const telephone = document.getElementById('editTelephone').value.trim();
+            const email = document.getElementById('editEmail').value.trim();
+            const statut = document.getElementById('editStatut').value;
+
+            if (!prenom || !nom || !telephone || !email) {
+                errorDiv.textContent = 'Tous les champs sont obligatoires';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                if (email !== usersMap[selectedMemberId].email) {
+                    const emailCheck = await db.collection('users')
+                        .where('email', '==', email)
+                        .limit(1)
+                        .get();
+                    if (!emailCheck.empty) {
+                        errorDiv.textContent = 'Cet email est déjà utilisé par un autre membre';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+                }
+
+                await db.collection('users').doc(selectedMemberId).update({
+                    prenom, nom, telephone, email, statut
+                });
+
+                showToast('✅ Membre mis à jour', 'success');
+                await loadAdminData();
+                showMemberDetails(selectedMemberId);
+            } catch (error) {
+                errorDiv.textContent = '❌ ' + error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        async function deleteMember() {
+            if (!selectedMemberId) return;
+            const node = usersMap[selectedMemberId];
+            if (!node) return;
+
+            if (node.leftChildId || node.rightChildId) {
+                showToast('⚠️ Retirez d\'abord ses filleuls avant de supprimer ce membre', 'warning');
+                return;
+            }
+
+            const confirmDelete = window.confirm(`Supprimer définitivement ${node.prenom} ${node.nom} (${node.codeMembre}) ?`);
+            if (!confirmDelete) return;
+
+            try {
+                if (node.parentId) {
+                    const updateData = {};
+                    updateData[node.position === 'left' ? 'leftChildId' : 'rightChildId'] = null;
+                    await db.collection('users').doc(node.parentId).update(updateData);
+                }
+
+                await db.collection('users').doc(selectedMemberId).delete();
+
+                showToast('🗑️ Membre supprimé', 'success');
+                closeMemberDetails();
+                await loadAdminData();
+            } catch (error) {
+                showToast('Erreur lors de la suppression', 'error');
+            }
+        }
+
+        // ============================================
+        // LOAD TREE
+        // ============================================
+
+        function buildTreeWithAddButtons(nodeId, isRoot = false, generation = 1) {
+            const node = usersMap[nodeId];
+            if (!node) return null;
+
+            currentGenMap[nodeId] = generation;
+
+            let nodeClass = 'tree-node-content';
+            if (isRoot) nodeClass += ' root';
+            if (selectedMemberId === nodeId) nodeClass += ' selected';
+
+            const positionLabel = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : '';
+            const initials = getInitials(node.prenom, node.nom);
+
+            let html = `
+                <div class="tree-node">
+                    <div class="${nodeClass}" onclick="showMemberDetails('${nodeId}')">
+                        <span class="gen-tag">Gén. ${generation}</span>
+                        <div class="node-avatar">${initials}</div>
+                        <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
+                        ${positionLabel ? `<div class="node-badges"><span class="badge badge-pos">${positionLabel}</span></div>` : ''}
+                    </div>
+            `;
+
+            const hasLeft = node.leftChildId && usersMap[node.leftChildId];
+            const hasRight = node.rightChildId && usersMap[node.rightChildId];
+
+            html += `<div class="tree-children">`;
+
+            if (hasLeft) {
+                html += `<div class="tree-child">${buildTreeWithAddButtons(node.leftChildId, false, generation + 1)}</div>`;
+            } else {
+                html += `
+                    <div class="tree-child">
+                        <div class="free-slot" onclick="openAddModal('${nodeId}', 'left', '${node.email}', '${node.prenom} ${node.nom}')">
+                            <div class="add-btn">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Ajouter</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (hasRight) {
+                html += `<div class="tree-child">${buildTreeWithAddButtons(node.rightChildId, false, generation + 1)}</div>`;
+            } else {
+                html += `
+                    <div class="tree-child">
+                        <div class="free-slot" onclick="openAddModal('${nodeId}', 'right', '${node.email}', '${node.prenom} ${node.nom}')">
+                            <div class="add-btn">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Ajouter</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            html += `</div>`;
+            return html;
+        }
+
+        async function loadTree() {
+            try {
+                const snapshot = await db.collection('users').get();
+                usersMap = {};
+                snapshot.forEach(doc => {
+                    usersMap[doc.id] = { id: doc.id, ...doc.data() };
+                });
+
+                let rootId = null;
+                for (const [id, data] of Object.entries(usersMap)) {
+                    if (!data.position) { rootId = id; break; }
+                }
+
+                currentGenMap = {};
+                const container = document.getElementById('treeContent');
+                const addSection = document.getElementById('addMemberSection');
+                if (rootId && usersMap[rootId]) {
+                    container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
+                    addSection.classList.add('hidden');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-slate-400 text-center py-6">
+                            <i class="fas fa-tree text-3xl mb-2"></i>
+                            <p>Aucun arbre</p>
+                            <p class="text-sm mt-1">Ajoutez le premier membre via le formulaire</p>
+                        </div>
+                    `;
+                    addSection.classList.remove('hidden');
+                }
+
+                resetZoom();
+
+            } catch (error) {
+                console.error('Erreur chargement arbre:', error);
+            }
+        }
+
+        document.getElementById('refreshTree').addEventListener('click', function() {
+            loadTree();
+            showToast('🔄 Arbre rafraîchi', 'success');
+        });
+
+        // ============================================
+        // MODAL AJOUT
+        // ============================================
+
+        function openAddModal(parentId, position, parentEmail, parentName) {
+            document.getElementById('modalParentId').value = parentId;
+            document.getElementById('modalPosition').value = position;
+            document.getElementById('modalParentInfo').textContent =
+                `Position: ${position === 'left' ? 'Gauche' : 'Droite'} sous ${parentName} (${parentEmail})`;
+
+            document.getElementById('addModal').classList.remove('hidden');
+            document.getElementById('modalAddForm').reset();
+            document.getElementById('modalError').classList.add('hidden');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+        }
+
+        document.getElementById('addModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddModal();
+        });
+
+        // ============================================
+        // MODAL AJOUT SUBMIT
+        // ============================================
+
+        document.getElementById('modalAddForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const parentId = document.getElementById('modalParentId').value;
+            const position = document.getElementById('modalPosition').value;
+            const nom = document.getElementById('modalNom').value.trim();
+            const prenom = document.getElementById('modalPrenom').value.trim();
+            const telephone = document.getElementById('modalTelephone').value.trim();
+            const email = document.getElementById('modalEmail').value.trim();
+
+            const errorDiv = document.getElementById('modalError');
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const loading = document.getElementById('modalLoading');
+            const btnText = document.getElementById('modalBtnText');
+
+            if (!nom || !prenom || !telephone || !email) {
+                errorDiv.textContent = 'Tous les champs sont obligatoires';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            loading.classList.remove('hidden');
+            btnText.textContent = 'Ajout en cours...';
+            submitBtn.disabled = true;
+            errorDiv.classList.add('hidden');
+
+            try {
+                const result = await ajouterMembre({
+                    nom, prenom, telephone, email,
+                    parentId: parentId,
+                    position: position,
+                    codeParrain: null
+                });
+
+                if (result.success) {
+                    showToast(`✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`, 'success');
+                    closeAddModal();
+                    await loadAdminData();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                errorDiv.textContent = '❌ ' + error.message;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                btnText.textContent = 'Ajouter le filleul';
+                submitBtn.disabled = false;
+            }
+        });
+
+        // ============================================
+        // FORMULAIRE PRINCIPAL
+        // ============================================
+
+        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const nom = document.getElementById('nom').value.trim();
+            const prenom = document.getElementById('prenom').value.trim();
+            const telephone = document.getElementById('telephone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const parentId = document.getElementById('parentIdField').value || null;
+            const position = document.getElementById('positionField').value || null;
+
+            const message = document.getElementById('formMessage');
+
+            if (!nom || !prenom || !telephone || !email) {
+                message.className = 'mt-3 text-sm text-red-600';
+                message.textContent = 'Tous les champs sont obligatoires';
+                message.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const result = await ajouterMembre({
+                    nom, prenom, telephone, email,
+                    parentId: parentId,
+                    position: position,
+                    codeParrain: null
+                });
+
+                if (result.success) {
+                    message.className = 'mt-3 text-sm text-emerald-600';
+                    message.textContent = `✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`;
+                    message.classList.remove('hidden');
+                    document.getElementById('addMemberForm').reset();
+                    await loadAdminData();
+                }
+            } catch (error) {
+                message.className = 'mt-3 text-sm text-red-600';
+                message.textContent = '❌ ' + error.message;
+                message.classList.remove('hidden');
+            }
+        });
     </script>
 </body>
 </html>
