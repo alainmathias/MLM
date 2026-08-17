@@ -69,7 +69,7 @@
             min-height: 100%;
             transition: transform 0.3s ease;
             transform-origin: left top;
-            padding-left: 20px;
+            padding-left: 10px;
         }
 
         /* ===== NODE ===== */
@@ -83,9 +83,9 @@
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 16px;
-            padding: 12px 16px;
-            min-width: 120px;
-            max-width: 200px;
+            padding: 10px 14px;
+            min-width: 100px;
+            max-width: 180px;
             width: auto;
             text-align: center;
             box-shadow: 0 2px 6px rgba(15,23,42,0.06);
@@ -122,21 +122,21 @@
         }
         .tree-node-content.root .gen-tag { background: rgba(15,23,42,0.75); }
         .node-avatar {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
-            margin: 0 auto 6px;
+            margin: 0 auto 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             color: #ffffff;
             background: linear-gradient(135deg, #64748b, #475569);
             letter-spacing: 0.5px;
         }
         .tree-node-content .node-username {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 500;
             color: #94a3b8;
             letter-spacing: 0.2px;
@@ -144,19 +144,19 @@
         }
         .tree-node-content .node-name {
             font-weight: 600;
-            font-size: 13.5px;
+            font-size: 12px;
             color: var(--ink);
             line-height: 1.2;
         }
         .tree-node-content .node-email {
-            font-size: 10.5px;
+            font-size: 9.5px;
             color: #94a3b8;
             font-weight: 500;
             letter-spacing: 0.2px;
             margin-top: 2px;
         }
         .tree-node-content .node-snec {
-            font-size: 9px;
+            font-size: 8px;
             color: #94a3b8;
             font-weight: 500;
             letter-spacing: 0.2px;
@@ -166,12 +166,12 @@
             display: flex;
             justify-content: center;
             gap: 4px;
-            margin-top: 6px;
+            margin-top: 4px;
         }
         .badge {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
-            padding: 2px 7px;
+            padding: 2px 6px;
             border-radius: 999px;
             letter-spacing: 0.3px;
         }
@@ -181,7 +181,7 @@
             border: none;
             background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
             color: white;
-            min-width: 150px;
+            min-width: 130px;
             box-shadow: 0 10px 20px -6px rgba(79,70,229,0.45);
         }
         .tree-node-content.root .node-avatar {
@@ -189,28 +189,29 @@
             border: 1.5px solid rgba(255,255,255,0.5);
         }
         .tree-node-content.root .node-username { color: rgba(255,255,255,0.6); }
-        .tree-node-content.root .node-name { color: #ffffff; font-size: 14.5px; }
+        .tree-node-content.root .node-name { color: #ffffff; font-size: 13px; }
         .tree-node-content.root .node-email { color: rgba(255,255,255,0.75); }
         .tree-node-content.root .node-snec { color: rgba(255,255,255,0.6); }
 
-        /* ===== CONNECTEURS SANS COUPURE (CORRIGÉ) ===== */
+        /* ===== CONNECTEURS ADAPTATIFS (CORRIGÉ) ===== */
         .tree-children {
             display: flex;
             justify-content: center;
-            gap: clamp(40px, 6vw, 100px);
-            margin-top: 28px;
-            padding-top: 28px;
+            gap: 16px;
+            margin-top: 24px;
+            padding-top: 24px;
             position: relative;
+            flex-wrap: nowrap;
         }
         .tree-children::before {
             content: '';
             position: absolute;
             top: 0;
             left: 50%;
-            width: 2.5px;
-            height: 28px;
+            width: 2px;
+            height: 24px;
             background: var(--line-color-strong);
-            transform: translateX(-1.25px);
+            transform: translateX(-1px);
             border-radius: 2px;
         }
 
@@ -220,21 +221,21 @@
             align-items: center;
             position: relative;
             flex: 0 1 auto;
-            min-width: 130px;
-            max-width: 320px;
-            padding: 0 12px;
+            min-width: 80px;
+            max-width: 220px;
+            padding: 0 4px;
         }
 
         /* Ligne verticale du parent vers l'enfant */
         .tree-child .tree-node::before {
             content: '';
             position: absolute;
-            top: -28px;
+            top: -24px;
             left: 50%;
-            width: 2.5px;
-            height: 28px;
+            width: 2px;
+            height: 24px;
             background: var(--line-color-strong);
-            transform: translateX(-1.25px);
+            transform: translateX(-1px);
             z-index: 1;
             border-radius: 2px;
         }
@@ -243,8 +244,8 @@
         .tree-child::before {
             content: '';
             position: absolute;
-            top: -28px;
-            height: 2.5px;
+            top: -24px;
+            height: 2px;
             background: var(--line-color-strong);
             z-index: 1;
             border-radius: 2px;
@@ -266,14 +267,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 120px;
-            min-height: 60px;
+            min-width: 80px;
+            min-height: 44px;
             border: 1.5px dashed #c7d2fe;
-            border-radius: 16px;
+            border-radius: 12px;
             background: #f5f5ff;
             cursor: pointer;
             transition: all 0.25s;
-            padding: 8px;
+            padding: 6px;
         }
         .free-slot:hover {
             background: #eef2ff;
@@ -285,12 +286,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             color: #6366f1;
         }
         .free-slot:hover .add-btn { color: #4338ca; }
-        .free-slot .add-btn i { font-size: 20px; }
-        .free-slot .add-btn span { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
+        .free-slot .add-btn i { font-size: 16px; }
+        .free-slot .add-btn span { font-size: 8px; font-weight: 600; letter-spacing: 0.2px; }
 
         /* ===== ZOOM CONTROLS ===== */
         .zoom-controls {
@@ -431,136 +432,51 @@
             letter-spacing: 0.5px;
         }
 
-        /* ===== RESPONSIVE - Évite le croisement ===== */
-        @media (max-width: 768px) {
-            .tree-container {
-                padding: 20px 12px;
-                height: calc(100vh - 200px);
-                min-height: 350px;
-            }
-            .tree-wrapper {
-                padding-left: 10px;
-            }
-            .tree-children {
-                gap: clamp(12px, 3vw, 30px);
-                flex-wrap: nowrap;
-            }
-            .tree-child {
-                min-width: 70px;
-                max-width: 160px;
-                padding: 0 4px;
-            }
-            .tree-node-content {
-                min-width: 60px;
-                max-width: 120px;
-                padding: 8px 8px;
-                border-radius: 12px;
-            }
-            .node-avatar {
-                width: 26px;
-                height: 26px;
-                font-size: 10px;
-                margin: 0 auto 4px;
-            }
-            .tree-node-content .node-name {
-                font-size: 10px;
-            }
-            .tree-node-content .node-username {
-                font-size: 8px;
-            }
-            .tree-node-content .node-email {
-                font-size: 8px;
-            }
-            .tree-node-content .node-snec {
-                font-size: 7px;
-            }
-            .gen-tag {
-                font-size: 7px;
-                padding: 1px 5px;
-                top: -7px;
-                right: -7px;
-            }
-            .free-slot {
-                min-width: 60px;
-                min-height: 40px;
-                padding: 4px;
-                border-radius: 10px;
-            }
-            .free-slot .add-btn i {
-                font-size: 14px;
-            }
-            .free-slot .add-btn span {
-                font-size: 8px;
-            }
-            .zoom-btn {
-                width: 28px;
-                height: 28px;
-                font-size: 12px;
-            }
-            .zoom-level {
-                font-size: 10px;
-                min-width: 32px;
-            }
-            .fab {
-                width: 48px;
-                height: 48px;
-                font-size: 20px;
-                bottom: 20px;
-                right: 20px;
-            }
-            /* Éviter le débordement sur mobile */
-            .tree-child .tree-node::before {
-                top: -20px;
-                height: 20px;
-            }
-            .tree-children {
-                margin-top: 20px;
-                padding-top: 20px;
-            }
-            .tree-children::before {
-                height: 20px;
-            }
-            .tree-child::before {
-                top: -20px;
-            }
-            .tree-child .tree-node::before {
-                top: -20px;
-                height: 20px;
-            }
+        /* ===== RESPONSIVE ADAPTATIF ===== */
+        @media (max-width: 480px) {
+            .tree-children { gap: 6px; }
+            .tree-child { min-width: 50px; max-width: 120px; padding: 0 2px; }
+            .tree-node-content { min-width: 50px; max-width: 90px; padding: 6px 6px; border-radius: 10px; }
+            .node-avatar { width: 20px; height: 20px; font-size: 8px; margin: 0 auto 2px; }
+            .tree-node-content .node-name { font-size: 8px; }
+            .tree-node-content .node-username { font-size: 7px; }
+            .tree-node-content .node-email { font-size: 7px; }
+            .tree-node-content .node-snec { font-size: 6px; }
+            .gen-tag { font-size: 6px; padding: 1px 4px; top: -6px; right: -6px; }
+            .free-slot { min-width: 50px; min-height: 30px; padding: 4px; border-radius: 8px; }
+            .free-slot .add-btn i { font-size: 10px; }
+            .free-slot .add-btn span { font-size: 6px; }
+            .badge { font-size: 6px; padding: 1px 4px; }
+        }
+
+        @media (min-width: 481px) and (max-width: 768px) {
+            .tree-children { gap: 10px; }
+            .tree-child { min-width: 60px; max-width: 140px; padding: 0 3px; }
+            .tree-node-content { min-width: 60px; max-width: 110px; padding: 8px 8px; border-radius: 10px; }
+            .node-avatar { width: 24px; height: 24px; font-size: 9px; }
+            .tree-node-content .node-name { font-size: 9px; }
+            .tree-node-content .node-username { font-size: 8px; }
+            .tree-node-content .node-email { font-size: 8px; }
+            .free-slot { min-width: 60px; min-height: 36px; }
+            .free-slot .add-btn i { font-size: 12px; }
         }
 
         @media (min-width: 769px) and (max-width: 1024px) {
-            .tree-children {
-                gap: 32px;
-            }
-            .tree-child {
-                min-width: 100px;
-                max-width: 220px;
-            }
-            .tree-node-content {
-                min-width: 90px;
-                max-width: 160px;
-            }
+            .tree-children { gap: 14px; }
+            .tree-child { min-width: 80px; max-width: 180px; }
+            .tree-node-content { min-width: 80px; max-width: 140px; }
         }
 
         @media (min-width: 1025px) and (max-width: 1440px) {
-            .tree-children {
-                gap: 48px;
-            }
-            .tree-child {
-                min-width: 120px;
-                max-width: 260px;
-            }
+            .tree-children { gap: 18px; }
+            .tree-child { min-width: 100px; max-width: 200px; }
+            .tree-node-content { min-width: 100px; max-width: 160px; }
         }
 
         @media (min-width: 1441px) {
-            .tree-children {
-                gap: 80px;
-            }
-            .tree-child {
-                min-width: 150px;
-                max-width: 340px;
-            }
+            .tree-children { gap: 24px; }
+            .tree-child { min-width: 120px; max-width: 240px; }
+            .tree-node-content { min-width: 120px; max-width: 180px; }
         }
     </style>
 </head>
@@ -949,7 +865,7 @@
 
                 if (contentWidth > containerWidth) {
                     wrapper.style.justifyContent = 'flex-start';
-                    wrapper.style.paddingLeft = '20px';
+                    wrapper.style.paddingLeft = '10px';
                 } else {
                     wrapper.style.justifyContent = 'center';
                     wrapper.style.paddingLeft = '0';
@@ -1597,7 +1513,7 @@
             const initials = getInitials(node.username || node.email || '?');
 
             let html = `
-                <div class="tree-node" style="${positionLabel === 'Gauche' ? 'margin-right:auto;' : positionLabel === 'Droite' ? 'margin-left:auto;' : ''}">
+                <div class="tree-node">
                     <div class="${nodeClass}" onclick="showMemberDetails('${nodeId}')">
                         <span class="gen-tag">Gén. ${generation}</span>
                         <div class="node-avatar">${initials}</div>
