@@ -63,12 +63,13 @@
         }
         .tree-wrapper {
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: flex-start;
             min-width: 100%;
             min-height: 100%;
             transition: transform 0.3s ease;
-            transform-origin: center top;
+            transform-origin: left top;
+            padding-left: 20px;
         }
 
         /* ===== NODE ===== */
@@ -78,7 +79,20 @@
             align-items: center;
             transition: all 0.25s;
         }
-   
+        .tree-node-content {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 12px 16px;
+            min-width: 120px;
+            max-width: 200px;
+            width: auto;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(15,23,42,0.06);
+            transition: all 0.25s;
+            position: relative;
+            word-break: break-word;
+        }
         .tree-node:hover > .tree-node-content {
             transform: translateY(-3px);
             box-shadow: 0 12px 24px -8px rgba(30,41,59,0.18);
@@ -148,42 +162,6 @@
             letter-spacing: 0.2px;
             margin-top: 1px;
         }
-
-
-
-        /* ===== APPROCHE ADAPTATIVE ===== */
-.tree-children {
-    display: flex;
-    justify-content: center;
-    gap: clamp(20px, 4vw, 80px); /* Espacement adaptatif */
-    margin-top: 28px;
-    padding-top: 28px;
-    position: relative;
-}
-
-.tree-child {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    flex: 1 1 0;
-    min-width: 100px;
-    max-width: 400px;
-}
-
-.tree-node-content {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 12px 16px;
-    min-width: 120px;
-    max-width: 200px; /* Limite la largeur pour éviter les débordements */
-    text-align: center;
-    box-shadow: 0 2px 6px rgba(15,23,42,0.06);
-    transition: all 0.25s;
-    position: relative;
-    word-break: break-word; /* Coupe les mots trop longs */
-}
         .node-badges {
             display: flex;
             justify-content: center;
@@ -215,11 +193,11 @@
         .tree-node-content.root .node-email { color: rgba(255,255,255,0.75); }
         .tree-node-content.root .node-snec { color: rgba(255,255,255,0.6); }
 
-        /* ===== CONNECTORS SANS COUPURE ===== */
+        /* ===== CONNECTEURS SANS COUPURE (CORRIGÉ) ===== */
         .tree-children {
             display: flex;
             justify-content: center;
-            gap: 48px;
+            gap: clamp(40px, 6vw, 100px);
             margin-top: 28px;
             padding-top: 28px;
             position: relative;
@@ -235,15 +213,19 @@
             transform: translateX(-1.25px);
             border-radius: 2px;
         }
+
         .tree-child {
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
-            flex: 1;
-            max-width: 300px;
-            min-width: 100px;
+            flex: 0 1 auto;
+            min-width: 130px;
+            max-width: 320px;
+            padding: 0 12px;
         }
+
+        /* Ligne verticale du parent vers l'enfant */
         .tree-child .tree-node::before {
             content: '';
             position: absolute;
@@ -256,6 +238,8 @@
             z-index: 1;
             border-radius: 2px;
         }
+
+        /* Ligne horizontale entre les enfants */
         .tree-child::before {
             content: '';
             position: absolute;
@@ -265,22 +249,31 @@
             z-index: 1;
             border-radius: 2px;
         }
-        .tree-child:first-child::before { left: 50%; right: 0; }
-        .tree-child:last-child::before { left: 0; right: 50%; }
-        .tree-child:only-child::before { display: none; }
+        .tree-child:first-child::before {
+            left: 50%;
+            right: 0;
+        }
+        .tree-child:last-child::before {
+            left: 0;
+            right: 50%;
+        }
+        .tree-child:only-child::before {
+            display: none;
+        }
 
         /* ===== FREE SLOT ===== */
         .free-slot {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 130px;
-            min-height: 64px;
+            min-width: 120px;
+            min-height: 60px;
             border: 1.5px dashed #c7d2fe;
             border-radius: 16px;
             background: #f5f5ff;
             cursor: pointer;
             transition: all 0.25s;
+            padding: 8px;
         }
         .free-slot:hover {
             background: #eef2ff;
@@ -438,19 +431,136 @@
             letter-spacing: 0.5px;
         }
 
+        /* ===== RESPONSIVE - Évite le croisement ===== */
         @media (max-width: 768px) {
-            .tree-children { gap: 18px; }
-            .tree-node-content { min-width: 92px; padding: 10px 12px; }
-            .node-avatar { width: 30px; height: 30px; font-size: 11px; }
-            .tree-node-content .node-name { font-size: 11.5px; }
-            .tree-node-content .node-username { font-size: 9px; }
-            .tree-node-content .node-email { font-size: 9.5px; }
-            .tree-node-content .node-snec { font-size: 8.5px; }
-            .free-slot { min-width: 92px; min-height: 54px; }
-            .free-slot .add-btn i { font-size: 16px; }
-            .zoom-btn { width: 28px; height: 28px; font-size: 12px; }
-            .zoom-level { font-size: 10px; min-width: 32px; }
-            .fab { width: 48px; height: 48px; font-size: 20px; bottom: 20px; right: 20px; }
+            .tree-container {
+                padding: 20px 12px;
+                height: calc(100vh - 200px);
+                min-height: 350px;
+            }
+            .tree-wrapper {
+                padding-left: 10px;
+            }
+            .tree-children {
+                gap: clamp(12px, 3vw, 30px);
+                flex-wrap: nowrap;
+            }
+            .tree-child {
+                min-width: 70px;
+                max-width: 160px;
+                padding: 0 4px;
+            }
+            .tree-node-content {
+                min-width: 60px;
+                max-width: 120px;
+                padding: 8px 8px;
+                border-radius: 12px;
+            }
+            .node-avatar {
+                width: 26px;
+                height: 26px;
+                font-size: 10px;
+                margin: 0 auto 4px;
+            }
+            .tree-node-content .node-name {
+                font-size: 10px;
+            }
+            .tree-node-content .node-username {
+                font-size: 8px;
+            }
+            .tree-node-content .node-email {
+                font-size: 8px;
+            }
+            .tree-node-content .node-snec {
+                font-size: 7px;
+            }
+            .gen-tag {
+                font-size: 7px;
+                padding: 1px 5px;
+                top: -7px;
+                right: -7px;
+            }
+            .free-slot {
+                min-width: 60px;
+                min-height: 40px;
+                padding: 4px;
+                border-radius: 10px;
+            }
+            .free-slot .add-btn i {
+                font-size: 14px;
+            }
+            .free-slot .add-btn span {
+                font-size: 8px;
+            }
+            .zoom-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+            .zoom-level {
+                font-size: 10px;
+                min-width: 32px;
+            }
+            .fab {
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                bottom: 20px;
+                right: 20px;
+            }
+            /* Éviter le débordement sur mobile */
+            .tree-child .tree-node::before {
+                top: -20px;
+                height: 20px;
+            }
+            .tree-children {
+                margin-top: 20px;
+                padding-top: 20px;
+            }
+            .tree-children::before {
+                height: 20px;
+            }
+            .tree-child::before {
+                top: -20px;
+            }
+            .tree-child .tree-node::before {
+                top: -20px;
+                height: 20px;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .tree-children {
+                gap: 32px;
+            }
+            .tree-child {
+                min-width: 100px;
+                max-width: 220px;
+            }
+            .tree-node-content {
+                min-width: 90px;
+                max-width: 160px;
+            }
+        }
+
+        @media (min-width: 1025px) and (max-width: 1440px) {
+            .tree-children {
+                gap: 48px;
+            }
+            .tree-child {
+                min-width: 120px;
+                max-width: 260px;
+            }
+        }
+
+        @media (min-width: 1441px) {
+            .tree-children {
+                gap: 80px;
+            }
+            .tree-child {
+                min-width: 150px;
+                max-width: 340px;
+            }
         }
     </style>
 </head>
@@ -557,8 +667,8 @@
                 </div>
                 <div class="tree-container" id="treeContainer">
                     <div class="tree-wrapper" id="treeWrapper">
-                        <div id="treeContent" class="flex flex-col items-center">
-                            <div class="text-slate-400 text-center py-6">
+                        <div id="treeContent" class="flex flex-col items-start">
+                            <div class="text-slate-400 text-center py-6 w-full">
                                 <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
                                 <p>Chargement de l'arbre...</p>
                             </div>
@@ -566,7 +676,7 @@
                     </div>
                 </div>
                 <div class="mt-3 text-xs text-slate-400 text-center">
-                    <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette
+                    <i class="fas fa-arrows-left-right mr-1"></i> Scroll horizontal disponible — Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette
                 </div>
             </div>
 
@@ -825,21 +935,25 @@
             const wrapper = document.getElementById('treeWrapper');
             wrapper.style.transform = `scale(${currentZoom})`;
             document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
-            // Ajuster l'alignement pour que le scroll reste à 100% comme dans arbre.html
             adjustTreeAlignment();
         }
 
-        // Alignement pour que le contenu soit scrollable à 100%
         function adjustTreeAlignment() {
             const wrapper = document.getElementById('treeWrapper');
             const container = document.getElementById('treeContainer');
             if (!wrapper || !container) return;
-            
+
             requestAnimationFrame(() => {
-                // Si le contenu dépasse la largeur du conteneur, on aligne à gauche
-                // pour permettre le scroll horizontal comme dans arbre.html
-                const overflowing = wrapper.scrollWidth > container.clientWidth + 1;
-                wrapper.style.justifyContent = overflowing ? 'flex-start' : 'center';
+                const contentWidth = wrapper.scrollWidth;
+                const containerWidth = container.clientWidth;
+
+                if (contentWidth > containerWidth) {
+                    wrapper.style.justifyContent = 'flex-start';
+                    wrapper.style.paddingLeft = '20px';
+                } else {
+                    wrapper.style.justifyContent = 'center';
+                    wrapper.style.paddingLeft = '0';
+                }
             });
         }
 
@@ -874,7 +988,6 @@
             }
         }, { passive: false });
 
-        // Réajuster après redimensionnement
         window.addEventListener('resize', function() {
             adjustTreeAlignment();
         });
@@ -1484,7 +1597,7 @@
             const initials = getInitials(node.username || node.email || '?');
 
             let html = `
-                <div class="tree-node">
+                <div class="tree-node" style="${positionLabel === 'Gauche' ? 'margin-right:auto;' : positionLabel === 'Droite' ? 'margin-left:auto;' : ''}">
                     <div class="${nodeClass}" onclick="showMemberDetails('${nodeId}')">
                         <span class="gen-tag">Gén. ${generation}</span>
                         <div class="node-avatar">${initials}</div>
@@ -1555,7 +1668,7 @@
                     container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
                 } else {
                     container.innerHTML = `
-                        <div class="text-slate-400 text-center py-6">
+                        <div class="text-slate-400 text-center py-6 w-full">
                             <i class="fas fa-tree text-3xl mb-2"></i>
                             <p>Aucun arbre</p>
                             <p class="text-sm mt-1">Ajoutez le premier membre via le bouton <i class="fas fa-plus-circle text-indigo-500"></i></p>
