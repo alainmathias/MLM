@@ -61,45 +61,63 @@
             height: calc(100vh - 260px);
             min-height: 460px;
         }
+
+        /*
+          ===== NOUVEAU MOTEUR DE POSITIONNEMENT =====
+          Le wrapper et #treeContent sont dimensionnés dynamiquement en JS
+          (largeur/hauteur en pixels réels calculées à partir de l'arbre).
+          Comme il n'y a plus de flexbox pour répartir les branches,
+          les sous-arbres ne peuvent plus se chevaucher/se croiser : chaque
+          nœud reçoit une position (x,y) calculée récursivement en fonction
+          de la largeur réelle de son sous-arbre. Le conteneur parent étant
+          en overflow:auto, tout excédent (à gauche comme à droite) reste
+          accessible au scroll, quelle que soit la taille de l'arbre.
+        */
         .tree-wrapper {
-            display: flex;
-            justify-content: flex-start;
-            align-items: flex-start;
-            min-width: 100%;
-            min-height: 100%;
+            position: relative;
+            display: inline-block;
             transition: transform 0.3s ease;
-            transform-origin: left top;
-            padding-left: 10px;
+            transform-origin: 0 0;
+        }
+        #treeContent {
+            position: relative;
+        }
+        .tree-connectors {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .tree-node-abs {
+            position: absolute;
+            transform: translateX(-50%);
+        }
+        .free-slot-abs {
+            position: absolute;
+            transform: translateX(-50%);
         }
 
         /* ===== NODE ===== */
-        .tree-node {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: all 0.25s;
-        }
         .tree-node-content {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 16px;
-            padding: 10px 14px;
-            min-width: 100px;
-            max-width: 180px;
-            width: auto;
+            padding: 12px 16px;
+            min-width: 120px;
+            max-width: 200px;
             text-align: center;
             box-shadow: 0 2px 6px rgba(15,23,42,0.06);
             transition: all 0.25s;
             position: relative;
             word-break: break-word;
         }
-        .tree-node:hover > .tree-node-content {
+        .tree-node-content:not(.empty) { cursor: pointer; }
+        .tree-node-content:hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 24px -8px rgba(30,41,59,0.18);
             border-color: var(--brand-1);
             z-index: 10;
         }
-        .tree-node-content:not(.empty) { cursor: pointer; }
         .tree-node-content.selected {
             border-color: var(--brand-1);
             box-shadow: 0 0 0 3px rgba(79,70,229,0.25), 0 12px 24px -8px rgba(30,41,59,0.18);
@@ -122,21 +140,21 @@
         }
         .tree-node-content.root .gen-tag { background: rgba(15,23,42,0.75); }
         .node-avatar {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            margin: 0 auto 4px;
+            margin: 0 auto 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 13px;
             color: #ffffff;
             background: linear-gradient(135deg, #64748b, #475569);
             letter-spacing: 0.5px;
         }
         .tree-node-content .node-username {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 500;
             color: #94a3b8;
             letter-spacing: 0.2px;
@@ -144,34 +162,35 @@
         }
         .tree-node-content .node-name {
             font-weight: 600;
-            font-size: 12px;
+            font-size: 13.5px;
             color: var(--ink);
             line-height: 1.2;
         }
         .tree-node-content .node-email {
-            font-size: 9.5px;
+            font-size: 10.5px;
             color: #94a3b8;
             font-weight: 500;
             letter-spacing: 0.2px;
             margin-top: 2px;
         }
         .tree-node-content .node-snec {
-            font-size: 8px;
+            font-size: 9px;
             color: #94a3b8;
             font-weight: 500;
             letter-spacing: 0.2px;
             margin-top: 1px;
         }
+
         .node-badges {
             display: flex;
             justify-content: center;
             gap: 4px;
-            margin-top: 4px;
+            margin-top: 6px;
         }
         .badge {
-            font-size: 8px;
+            font-size: 9px;
             font-weight: 700;
-            padding: 2px 6px;
+            padding: 2px 7px;
             border-radius: 999px;
             letter-spacing: 0.3px;
         }
@@ -181,7 +200,7 @@
             border: none;
             background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
             color: white;
-            min-width: 130px;
+            min-width: 150px;
             box-shadow: 0 10px 20px -6px rgba(79,70,229,0.45);
         }
         .tree-node-content.root .node-avatar {
@@ -189,92 +208,22 @@
             border: 1.5px solid rgba(255,255,255,0.5);
         }
         .tree-node-content.root .node-username { color: rgba(255,255,255,0.6); }
-        .tree-node-content.root .node-name { color: #ffffff; font-size: 13px; }
+        .tree-node-content.root .node-name { color: #ffffff; font-size: 14.5px; }
         .tree-node-content.root .node-email { color: rgba(255,255,255,0.75); }
         .tree-node-content.root .node-snec { color: rgba(255,255,255,0.6); }
-
-        /* ===== CONNECTEURS ADAPTATIFS (CORRIGÉ) ===== */
-        .tree-children {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-            margin-top: 24px;
-            padding-top: 24px;
-            position: relative;
-            flex-wrap: nowrap;
-        }
-        .tree-children::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            width: 2px;
-            height: 24px;
-            background: var(--line-color-strong);
-            transform: translateX(-1px);
-            border-radius: 2px;
-        }
-
-        .tree-child {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            flex: 0 1 auto;
-            min-width: 80px;
-            max-width: 220px;
-            padding: 0 4px;
-        }
-
-        /* Ligne verticale du parent vers l'enfant */
-        .tree-child .tree-node::before {
-            content: '';
-            position: absolute;
-            top: -24px;
-            left: 50%;
-            width: 2px;
-            height: 24px;
-            background: var(--line-color-strong);
-            transform: translateX(-1px);
-            z-index: 1;
-            border-radius: 2px;
-        }
-
-        /* Ligne horizontale entre les enfants */
-        .tree-child::before {
-            content: '';
-            position: absolute;
-            top: -24px;
-            height: 2px;
-            background: var(--line-color-strong);
-            z-index: 1;
-            border-radius: 2px;
-        }
-        .tree-child:first-child::before {
-            left: 50%;
-            right: 0;
-        }
-        .tree-child:last-child::before {
-            left: 0;
-            right: 50%;
-        }
-        .tree-child:only-child::before {
-            display: none;
-        }
 
         /* ===== FREE SLOT ===== */
         .free-slot {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 80px;
-            min-height: 44px;
+            min-width: 130px;
+            min-height: 64px;
             border: 1.5px dashed #c7d2fe;
-            border-radius: 12px;
+            border-radius: 16px;
             background: #f5f5ff;
             cursor: pointer;
             transition: all 0.25s;
-            padding: 6px;
         }
         .free-slot:hover {
             background: #eef2ff;
@@ -286,12 +235,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
+            gap: 4px;
             color: #6366f1;
         }
         .free-slot:hover .add-btn { color: #4338ca; }
-        .free-slot .add-btn i { font-size: 16px; }
-        .free-slot .add-btn span { font-size: 8px; font-weight: 600; letter-spacing: 0.2px; }
+        .free-slot .add-btn i { font-size: 20px; }
+        .free-slot .add-btn span { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
 
         /* ===== ZOOM CONTROLS ===== */
         .zoom-controls {
@@ -432,51 +381,18 @@
             letter-spacing: 0.5px;
         }
 
-        /* ===== RESPONSIVE ADAPTATIF ===== */
-        @media (max-width: 480px) {
-            .tree-children { gap: 6px; }
-            .tree-child { min-width: 50px; max-width: 120px; padding: 0 2px; }
-            .tree-node-content { min-width: 50px; max-width: 90px; padding: 6px 6px; border-radius: 10px; }
-            .node-avatar { width: 20px; height: 20px; font-size: 8px; margin: 0 auto 2px; }
-            .tree-node-content .node-name { font-size: 8px; }
-            .tree-node-content .node-username { font-size: 7px; }
-            .tree-node-content .node-email { font-size: 7px; }
-            .tree-node-content .node-snec { font-size: 6px; }
-            .gen-tag { font-size: 6px; padding: 1px 4px; top: -6px; right: -6px; }
-            .free-slot { min-width: 50px; min-height: 30px; padding: 4px; border-radius: 8px; }
-            .free-slot .add-btn i { font-size: 10px; }
-            .free-slot .add-btn span { font-size: 6px; }
-            .badge { font-size: 6px; padding: 1px 4px; }
-        }
-
-        @media (min-width: 481px) and (max-width: 768px) {
-            .tree-children { gap: 10px; }
-            .tree-child { min-width: 60px; max-width: 140px; padding: 0 3px; }
-            .tree-node-content { min-width: 60px; max-width: 110px; padding: 8px 8px; border-radius: 10px; }
-            .node-avatar { width: 24px; height: 24px; font-size: 9px; }
-            .tree-node-content .node-name { font-size: 9px; }
-            .tree-node-content .node-username { font-size: 8px; }
-            .tree-node-content .node-email { font-size: 8px; }
-            .free-slot { min-width: 60px; min-height: 36px; }
-            .free-slot .add-btn i { font-size: 12px; }
-        }
-
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .tree-children { gap: 14px; }
-            .tree-child { min-width: 80px; max-width: 180px; }
-            .tree-node-content { min-width: 80px; max-width: 140px; }
-        }
-
-        @media (min-width: 1025px) and (max-width: 1440px) {
-            .tree-children { gap: 18px; }
-            .tree-child { min-width: 100px; max-width: 200px; }
-            .tree-node-content { min-width: 100px; max-width: 160px; }
-        }
-
-        @media (min-width: 1441px) {
-            .tree-children { gap: 24px; }
-            .tree-child { min-width: 120px; max-width: 240px; }
-            .tree-node-content { min-width: 120px; max-width: 180px; }
+        @media (max-width: 768px) {
+            .tree-node-content { min-width: 92px; padding: 10px 12px; }
+            .node-avatar { width: 30px; height: 30px; font-size: 11px; }
+            .tree-node-content .node-name { font-size: 11.5px; }
+            .tree-node-content .node-username { font-size: 9px; }
+            .tree-node-content .node-email { font-size: 9.5px; }
+            .tree-node-content .node-snec { font-size: 8.5px; }
+            .free-slot { min-width: 92px; min-height: 54px; }
+            .free-slot .add-btn i { font-size: 16px; }
+            .zoom-btn { width: 28px; height: 28px; font-size: 12px; }
+            .zoom-level { font-size: 10px; min-width: 32px; }
+            .fab { width: 48px; height: 48px; font-size: 20px; bottom: 20px; right: 20px; }
         }
     </style>
 </head>
@@ -583,8 +499,8 @@
                 </div>
                 <div class="tree-container" id="treeContainer">
                     <div class="tree-wrapper" id="treeWrapper">
-                        <div id="treeContent" class="flex flex-col items-start">
-                            <div class="text-slate-400 text-center py-6 w-full">
+                        <div id="treeContent">
+                            <div class="text-slate-400 text-center py-6">
                                 <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
                                 <p>Chargement de l'arbre...</p>
                             </div>
@@ -592,7 +508,7 @@
                     </div>
                 </div>
                 <div class="mt-3 text-xs text-slate-400 text-center">
-                    <i class="fas fa-arrows-left-right mr-1"></i> Scroll horizontal disponible — Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette
+                    <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette — faites défiler horizontalement pour explorer les branches
                 </div>
             </div>
 
@@ -851,26 +767,6 @@
             const wrapper = document.getElementById('treeWrapper');
             wrapper.style.transform = `scale(${currentZoom})`;
             document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
-            adjustTreeAlignment();
-        }
-
-        function adjustTreeAlignment() {
-            const wrapper = document.getElementById('treeWrapper');
-            const container = document.getElementById('treeContainer');
-            if (!wrapper || !container) return;
-
-            requestAnimationFrame(() => {
-                const contentWidth = wrapper.scrollWidth;
-                const containerWidth = container.clientWidth;
-
-                if (contentWidth > containerWidth) {
-                    wrapper.style.justifyContent = 'flex-start';
-                    wrapper.style.paddingLeft = '10px';
-                } else {
-                    wrapper.style.justifyContent = 'center';
-                    wrapper.style.paddingLeft = '0';
-                }
-            });
         }
 
         function zoomIn() {
@@ -903,10 +799,6 @@
                 else zoomOut();
             }
         }, { passive: false });
-
-        window.addEventListener('resize', function() {
-            adjustTreeAlignment();
-        });
 
         // ============================================
         // ADMIN LOGIN
@@ -1323,7 +1215,7 @@
             document.getElementById('fieldPosition').textContent = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : 'Racine';
 
             cancelEditMode();
-            renderTreeOnly();
+            renderTree({ keepScroll: true });
             openSheetUI();
         }
 
@@ -1341,7 +1233,7 @@
             document.getElementById('sheetOverlay').classList.remove('open');
             document.getElementById('memberSheet').classList.remove('open');
             selectedMemberId = null;
-            renderTreeOnly();
+            renderTree({ keepScroll: true });
         }
 
         function closeMemberDetails() {
@@ -1353,19 +1245,6 @@
         window.addEventListener('popstate', function() {
             if (sheetOpen) closeSheetUI();
         });
-
-        function renderTreeOnly() {
-            let rootId = null;
-            for (const [id, data] of Object.entries(usersMap)) {
-                if (!data.position) { rootId = id; break; }
-            }
-            currentGenMap = {};
-            const container = document.getElementById('treeContent');
-            if (rootId && usersMap[rootId]) {
-                container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
-            }
-            adjustTreeAlignment();
-        }
 
         function enableEditMode() {
             const node = usersMap[selectedMemberId];
@@ -1496,73 +1375,199 @@
         }
 
         // ============================================
-        // LOAD TREE
+        // ARBRE — MOTEUR DE POSITIONNEMENT (sans croisement)
         // ============================================
+        //
+        // Principe : chaque nœud (réel ou "place libre") occupe une unité
+        // de largeur. La position x d'un nœud interne est la moyenne des
+        // x de ses deux enfants, qui sont eux-mêmes calculés récursivement
+        // en traitant TOUJOURS le sous-arbre gauche en entier avant le
+        // sous-arbre droit. Cela garantit que l'ordre gauche→droite des
+        // unités correspond exactement à l'ordre gauche→droite dans
+        // l'arbre : deux sous-arbres frères ne peuvent donc jamais se
+        // chevaucher ni se croiser, quelle que soit leur taille respective.
+        // Le tout est ensuite dessiné en position absolue (pixels), avec
+        // des connecteurs SVG, dans un conteneur dont la largeur/hauteur
+        // réelle est calculée dynamiquement — le scroll natif du
+        // conteneur parent permet donc toujours d'atteindre n'importe
+        // quelle branche, à gauche comme à droite.
 
-        function buildTreeWithAddButtons(nodeId, isRoot = false, generation = 1) {
-            const node = usersMap[nodeId];
-            if (!node) return null;
+        const CARD_MAX_W = 200;   // doit correspondre à .tree-node-content max-width
+        const SLOT_W = 230;       // espacement horizontal entre deux unités voisines
+        const LEVEL_H = 175;      // espacement vertical entre deux générations
+        const TOP_MARGIN = 30;
+        const SIDE_MARGIN = 90;
+        const BOTTOM_MARGIN = 90;
+        const CARD_CONNECT_OFFSET = 128; // point de départ approx. du connecteur (bas de carte)
 
-            currentGenMap[nodeId] = generation;
+        function renderTree(opts) {
+            opts = opts || {};
+            let rootId = null;
+            for (const [id, data] of Object.entries(usersMap)) {
+                if (!data.position) { rootId = id; break; }
+            }
 
-            let nodeClass = 'tree-node-content';
-            if (isRoot) nodeClass += ' root';
-            if (selectedMemberId === nodeId) nodeClass += ' selected';
+            const container = document.getElementById('treeContent');
+            const scrollBox = document.getElementById('treeContainer');
+            const prevScrollLeft = scrollBox.scrollLeft;
+            const prevScrollTop = scrollBox.scrollTop;
 
-            const positionLabel = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : '';
-            const initials = getInitials(node.username || node.email || '?');
-
-            let html = `
-                <div class="tree-node">
-                    <div class="${nodeClass}" onclick="showMemberDetails('${nodeId}')">
-                        <span class="gen-tag">Gén. ${generation}</span>
-                        <div class="node-avatar">${initials}</div>
-                        <div class="node-username">@${node.username || '---'}</div>
-                        <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
-                        <div class="node-email">${node.email || '---'}</div>
-                        ${node.snecId ? `<div class="node-snec">SNEC: ${node.snecId}</div>` : ''}
-                        ${positionLabel ? `<div class="node-badges"><span class="badge badge-pos">${positionLabel}</span></div>` : ''}
+            if (!rootId || !usersMap[rootId]) {
+                container.style.width = '';
+                container.style.height = '';
+                container.innerHTML = `
+                    <div class="text-slate-400 text-center py-6">
+                        <i class="fas fa-tree text-3xl mb-2"></i>
+                        <p>Aucun arbre</p>
+                        <p class="text-sm mt-1">Ajoutez le premier membre via le bouton <i class="fas fa-plus-circle text-indigo-500"></i></p>
                     </div>
+                `;
+                return;
+            }
+
+            let nextX = 0;
+            let maxDepth = 0;
+            const nodePos = {};
+            const placeholders = [];
+            currentGenMap = {};
+
+            function layout(nodeId, depth) {
+                const node = usersMap[nodeId];
+                const leftId = node.leftChildId && usersMap[node.leftChildId] ? node.leftChildId : null;
+                const rightId = node.rightChildId && usersMap[node.rightChildId] ? node.rightChildId : null;
+                if (depth > maxDepth) maxDepth = depth;
+
+                let leftX, rightX;
+
+                if (leftId) {
+                    leftX = layout(leftId, depth + 1);
+                } else {
+                    leftX = nextX;
+                    placeholders.push({ parentId: nodeId, position: 'left', x: nextX, depth: depth + 1 });
+                    nextX++;
+                    if (depth + 1 > maxDepth) maxDepth = depth + 1;
+                }
+
+                if (rightId) {
+                    rightX = layout(rightId, depth + 1);
+                } else {
+                    rightX = nextX;
+                    placeholders.push({ parentId: nodeId, position: 'right', x: nextX, depth: depth + 1 });
+                    nextX++;
+                    if (depth + 1 > maxDepth) maxDepth = depth + 1;
+                }
+
+                const x = (leftX + rightX) / 2;
+                nodePos[nodeId] = { x, depth, leftId, rightId };
+                currentGenMap[nodeId] = depth + 1;
+                return x;
+            }
+
+            layout(rootId, 0);
+
+            const totalWidth = Math.max(nextX * SLOT_W + SIDE_MARGIN * 2, scrollBox.clientWidth);
+            const totalHeight = (maxDepth + 1) * LEVEL_H + TOP_MARGIN + BOTTOM_MARGIN;
+
+            function px(x) { return SIDE_MARGIN + x * SLOT_W + SLOT_W / 2; }
+            function py(depth) { return TOP_MARGIN + depth * LEVEL_H; }
+
+            function connectorPath(x1, y1, x2, y2, dashed) {
+                const midY = (y1 + y2) / 2;
+                return `<path d="M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}" ` +
+                       `fill="none" stroke="${dashed ? '#c7d2fe' : '#94a3b8'}" stroke-width="2.5" ` +
+                       `${dashed ? 'stroke-dasharray="5,4"' : ''} />`;
+            }
+
+            let svgLines = '';
+            for (const [id, pos] of Object.entries(nodePos)) {
+                const startX = px(pos.x);
+                const startY = py(pos.depth) + CARD_CONNECT_OFFSET;
+
+                if (pos.leftId) {
+                    const c = nodePos[pos.leftId];
+                    svgLines += connectorPath(startX, startY, px(c.x), py(c.depth), false);
+                } else {
+                    const ph = placeholders.find(p => p.parentId === id && p.position === 'left');
+                    svgLines += connectorPath(startX, startY, px(ph.x), py(ph.depth), true);
+                }
+
+                if (pos.rightId) {
+                    const c = nodePos[pos.rightId];
+                    svgLines += connectorPath(startX, startY, px(c.x), py(c.depth), false);
+                } else {
+                    const ph = placeholders.find(p => p.parentId === id && p.position === 'right');
+                    svgLines += connectorPath(startX, startY, px(ph.x), py(ph.depth), true);
+                }
+            }
+
+            function renderNodeCard(nodeId, pos) {
+                const node = usersMap[nodeId];
+                const isRoot = !node.position;
+                let nodeClass = 'tree-node-content';
+                if (isRoot) nodeClass += ' root';
+                if (selectedMemberId === nodeId) nodeClass += ' selected';
+                const positionLabel = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : '';
+                const initials = getInitials(node.username || node.email || '?');
+
+                return `
+                    <div class="tree-node-abs" style="left:${px(pos.x)}px; top:${py(pos.depth)}px;">
+                        <div class="${nodeClass}" onclick="showMemberDetails('${nodeId}')">
+                            <span class="gen-tag">Gén. ${pos.depth + 1}</span>
+                            <div class="node-avatar">${initials}</div>
+                            <div class="node-username">@${node.username || '---'}</div>
+                            <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
+                            <div class="node-email">${node.email || '---'}</div>
+                            ${node.snecId ? `<div class="node-snec">SNEC: ${node.snecId}</div>` : ''}
+                            ${positionLabel ? `<div class="node-badges"><span class="badge badge-pos">${positionLabel}</span></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderFreeSlot(ph) {
+                const parent = usersMap[ph.parentId];
+                if (!parent) return '';
+                return `
+                    <div class="free-slot-abs" style="left:${px(ph.x)}px; top:${py(ph.depth)}px;">
+                        <div class="free-slot" onclick="openAddSheetWithParent('${ph.parentId}', '${ph.position}', '${parent.email}', '${parent.prenom} ${parent.nom}')">
+                            <div class="add-btn">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Ajouter</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let nodesHtml = '';
+            for (const [id, pos] of Object.entries(nodePos)) {
+                nodesHtml += renderNodeCard(id, pos);
+            }
+            let slotsHtml = '';
+            for (const ph of placeholders) {
+                slotsHtml += renderFreeSlot(ph);
+            }
+
+            container.style.width = totalWidth + 'px';
+            container.style.height = totalHeight + 'px';
+            container.innerHTML = `
+                <svg class="tree-connectors" width="${totalWidth}" height="${totalHeight}">${svgLines}</svg>
+                ${nodesHtml}
+                ${slotsHtml}
             `;
 
-            const hasLeft = node.leftChildId && usersMap[node.leftChildId];
-            const hasRight = node.rightChildId && usersMap[node.rightChildId];
-
-            html += `<div class="tree-children">`;
-
-            if (hasLeft) {
-                html += `<div class="tree-child">${buildTreeWithAddButtons(node.leftChildId, false, generation + 1)}</div>`;
+            if (opts.keepScroll) {
+                scrollBox.scrollLeft = prevScrollLeft;
+                scrollBox.scrollTop = prevScrollTop;
             } else {
-                html += `
-                    <div class="tree-child">
-                        <div class="free-slot" onclick="openAddSheetWithParent('${nodeId}', 'left', '${node.email}', '${node.prenom} ${node.nom}')">
-                            <div class="add-btn">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>Ajouter</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // Centre la racine à l'ouverture, tout en laissant le scroll
+                // natif du conteneur libre d'accéder à toute branche.
+                requestAnimationFrame(() => {
+                    const rootPxX = px(nodePos[rootId].x);
+                    scrollBox.scrollLeft = Math.max(0, rootPxX - scrollBox.clientWidth / 2);
+                    scrollBox.scrollTop = 0;
+                });
             }
-
-            if (hasRight) {
-                html += `<div class="tree-child">${buildTreeWithAddButtons(node.rightChildId, false, generation + 1)}</div>`;
-            } else {
-                html += `
-                    <div class="tree-child">
-                        <div class="free-slot" onclick="openAddSheetWithParent('${nodeId}', 'right', '${node.email}', '${node.prenom} ${node.nom}')">
-                            <div class="add-btn">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>Ajouter</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            html += `</div>`;
-            html += `</div>`;
-            return html;
         }
 
         async function loadTree() {
@@ -1573,27 +1578,8 @@
                     usersMap[doc.id] = { id: doc.id, ...doc.data() };
                 });
 
-                let rootId = null;
-                for (const [id, data] of Object.entries(usersMap)) {
-                    if (!data.position) { rootId = id; break; }
-                }
-
-                currentGenMap = {};
-                const container = document.getElementById('treeContent');
-                if (rootId && usersMap[rootId]) {
-                    container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
-                } else {
-                    container.innerHTML = `
-                        <div class="text-slate-400 text-center py-6 w-full">
-                            <i class="fas fa-tree text-3xl mb-2"></i>
-                            <p>Aucun arbre</p>
-                            <p class="text-sm mt-1">Ajoutez le premier membre via le bouton <i class="fas fa-plus-circle text-indigo-500"></i></p>
-                        </div>
-                    `;
-                }
-
                 resetZoom();
-                adjustTreeAlignment();
+                renderTree({ keepScroll: false });
 
             } catch (error) {
                 console.error('Erreur chargement arbre:', error);
