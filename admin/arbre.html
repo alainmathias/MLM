@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbre Complet - CommunityTree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --line-color: #cbd5e1;
+            --line-color-strong: #94a3b8;
+            --ink: #1e293b;
+            --brand-1: #4f46e5;
+            --brand-2: #7c3aed;
+        }
+        * { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+
+        .gradient-bg { background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 100%); }
+
+        .tree-container {
+            overflow: auto;
+            padding: 40px 24px;
+            min-height: 600px;
+            background:
+                radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0) 0 0/24px 24px,
+                #f8fafc;
+            border-radius: 14px;
+            position: relative;
+        }
+        .tree-wrapper {
+            display: flex;
+            justify-content: center;
+            justify-content: safe center;
+            align-items: flex-start;
+            min-width: 100%;
+            min-height: 100%;
+            transition: transform 0.3s;
+        }
+
+        /* ===== NODE ===== */
+        .tree-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: default;
+            transition: all 0.25s;
+        }
+        .tree-node:hover > .tree-node-content {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px -8px rgba(30,41,59,0.18);
+            border-color: var(--brand-1);
+            z-index: 10;
+        }
+        .tree-node-content {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px 18px 12px;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(15,23,42,0.06);
+            transition: all 0.25s;
+            position: relative;
+        }
+        .node-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin: 0 auto 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #64748b, #475569);
+            letter-spacing: 0.5px;
+        }
+        .tree-node-content .node-name {
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+        .tree-node-content .node-code {
+            font-size: 10.5px;
+            color: #94a3b8;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+        }
+        .node-badges {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .badge {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            letter-spacing: 0.3px;
+        }
+        .badge-pos { background: #eef2ff; color: #4f46e5; }
+        .badge-suspended { background: #fee2e2; color: #dc2626; }
+
+        /* Root node */
+        .tree-node-content.root {
+            border: none;
+            background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+            color: white;
+            min-width: 150px;
+            box-shadow: 0 10px 20px -6px rgba(79,70,229,0.45);
+        }
+        .tree-node-content.root .node-avatar {
+            background: rgba(255,255,255,0.22);
+            border: 1.5px solid rgba(255,255,255,0.5);
+        }
+        .tree-node-content.root .node-name { color: #ffffff; font-size: 14.5px; }
+        .tree-node-content.root .node-code { color: rgba(255,255,255,0.75); }
+
+        /* Suspended node */
+        .tree-node-content.suspended {
+            border-color: #fca5a5;
+            background: #fef2f2;
+        }
+        .tree-node-content.suspended .node-avatar {
+            background: linear-gradient(135deg, #f87171, #dc2626);
+        }
+
+        /* Empty slot */
+        .tree-node-content.empty {
+            opacity: 0.55;
+            border: 1.5px dashed #cbd5e1;
+            background: #f1f5f9;
+            box-shadow: none;
+            padding: 12px 16px;
+            min-width: 100px;
+        }
+        .tree-node-content.empty:hover { transform: none; box-shadow: none; border-color: #cbd5e1; }
+        .tree-node-content.empty .node-name { color: #94a3b8; font-size: 12px; font-weight: 500; }
+        .empty-icon { color: #cbd5e1; font-size: 14px; margin-bottom: 4px; }
+
+        /* ===== CONNECTORS ===== */
+        .tree-children {
+            display: flex;
+            justify-content: center;
+            gap: 36px;
+            margin-top: 30px;
+            padding-top: 30px;
+            position: relative;
+        }
+        /* stub from parent down to the horizontal bar */
+        .tree-children::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 16px;
+            background: var(--line-color-strong);
+            transform: translateX(-1px);
+        }
+        .tree-child {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding-top: 14px;
+        }
+        /* stub from horizontal bar down to child node */
+        .tree-child::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            width: 2px;
+            height: 14px;
+            background: var(--line-color);
+            transform: translateX(-1px);
+        }
+        /* horizontal bar segment (only two children max: left/right) */
+        .tree-child::after {
+            content: '';
+            position: absolute;
+            top: 16px;
+            height: 2px;
+            background: var(--line-color);
+        }
+        .tree-child:first-child::after { left: 50%; width: 50%; }
+        .tree-child:last-child::after  { right: 50%; width: 50%; }
+        .tree-child:only-child::after  { left: 50%; width: 0; }
+
+        .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(15,23,42,0.12); }
+
+        .zoom-controls {
+            position: sticky;
+            bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            z-index: 10;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 999;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-info { background: #4f46e5; }
+
+        @media (max-width: 768px) {
+            .tree-children { gap: 18px; }
+            .tree-node-content { min-width: 92px; padding: 10px 12px; }
+            .node-avatar { width: 30px; height: 30px; font-size: 11px; }
+            .tree-node-content .node-name { font-size: 11.5px; }
+            .tree-node-content .node-code { font-size: 9.5px; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:a34ccee92f95950a63be36",
+            measurementId: "G-DLCVD2MRSC"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        db.settings({ timestampsInSnapshots: true });
+    </script>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30 border-b border-slate-100">
+        <div class="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
+            <div class="flex items-center">
+                <div class="w-9 h-9 rounded-xl gradient-bg flex items-center justify-center mr-2">
+                    <i class="fas fa-tree text-white text-sm"></i>
+                </div>
+                <span class="text-xl font-bold text-slate-800 tracking-tight">CommunityTree</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-slate-500 font-medium" id="totalMembres">0 membres</span>
+                <a href="index.html" class="text-slate-400 hover:text-slate-700 transition">
+                    <i class="fas fa-home"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-20 px-4 pb-8 max-w-7xl mx-auto">
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 stat-card">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Total</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1" id="statTotal">0</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 stat-card">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Niveaux</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1" id="statNiveaux">0</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 stat-card">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Feuilles</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1" id="statFeuilles">0</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 stat-card">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Racine</p>
+                <p class="text-lg font-bold text-slate-800 mt-1 truncate" id="statRacine">-</p>
+            </div>
+        </div>
+
+        <!-- Tree -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                <h2 class="text-lg font-bold text-slate-800">
+                    <i class="fas fa-sitemap text-indigo-600 mr-2"></i> Arbre Complet
+                </h2>
+                <div class="flex flex-wrap gap-2">
+                    <button id="zoomIn" class="w-10 h-10 flex items-center justify-center bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition">
+                        <i class="fas fa-plus text-sm"></i>
+                    </button>
+                    <button id="zoomOut" class="w-10 h-10 flex items-center justify-center bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition">
+                        <i class="fas fa-minus text-sm"></i>
+                    </button>
+                    <button id="resetZoom" class="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition">
+                        <i class="fas fa-compress text-sm"></i>
+                    </button>
+                    <button id="refreshTree" class="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition">
+                        <i class="fas fa-sync-alt text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tree-container" id="treeContainer">
+                <div class="tree-wrapper" id="treeWrapper">
+                    <div id="treeContent" class="flex flex-col items-center">
+                        <div class="text-slate-400 text-center py-10">
+                            <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                            <p>Chargement de l'arbre...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Légende -->
+        <div class="mt-4 flex flex-wrap gap-5 justify-center text-sm text-slate-500 bg-white rounded-2xl shadow-sm border border-slate-100 py-3">
+            <div class="flex items-center">
+                <span class="w-3.5 h-3.5 rounded-full mr-2 gradient-bg"></span>
+                Racine
+            </div>
+            <div class="flex items-center">
+                <span class="w-3.5 h-3.5 bg-white border-2 border-slate-300 rounded-full mr-2"></span>
+                Membre actif
+            </div>
+            <div class="flex items-center">
+                <span class="w-3.5 h-3.5 bg-red-50 border-2 border-red-300 rounded-full mr-2"></span>
+                Membre suspendu
+            </div>
+            <div class="flex items-center">
+                <span class="w-3.5 h-3.5 bg-slate-100 border-2 border-dashed border-slate-300 rounded-full mr-2"></span>
+                Position libre
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // TOAST
+        // ============================================
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast toast-info show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ============================================
+        // VARIABLES
+        // ============================================
+
+        let usersMap = {};
+        let scale = 1;
+        const MIN_SCALE = 0.3;
+        const MAX_SCALE = 2;
+
+        // ============================================
+        // ZOOM
+        // ============================================
+
+        document.getElementById('zoomIn').addEventListener('click', function() {
+            scale = Math.min(scale + 0.1, MAX_SCALE);
+            updateZoom();
+        });
+        document.getElementById('zoomOut').addEventListener('click', function() {
+            scale = Math.max(scale - 0.1, MIN_SCALE);
+            updateZoom();
+        });
+        document.getElementById('resetZoom').addEventListener('click', function() {
+            scale = 1;
+            updateZoom();
+        });
+
+        function updateZoom() {
+            document.getElementById('treeWrapper').style.transform = `scale(${scale})`;
+            document.getElementById('treeWrapper').style.transformOrigin = 'center top';
+            adjustTreeAlignment();
+        }
+
+        // Filet de sécurité : si le contenu déborde le conteneur, on aligne
+        // à gauche pour garder tout le contenu accessible au scroll (sinon
+        // la partie gauche reste hors d'atteinte car scrollLeft ne peut pas
+        // être négatif avec un centrage flexbox classique).
+        function adjustTreeAlignment() {
+            const wrapper = document.getElementById('treeWrapper');
+            const container = document.getElementById('treeContainer');
+            if (!wrapper || !container) return;
+            requestAnimationFrame(() => {
+                const overflowing = wrapper.scrollWidth > container.clientWidth + 1;
+                wrapper.style.justifyContent = overflowing ? 'flex-start' : 'center';
+            });
+        }
+
+        window.addEventListener('resize', function() {
+            adjustTreeAlignment();
+        });
+
+        // ============================================
+        // HELPERS
+        // ============================================
+
+        function getInitials(prenom, nom) {
+            const a = (prenom || '?').trim().charAt(0).toUpperCase();
+            const b = (nom || '?').trim().charAt(0).toUpperCase();
+            return `${a}${b}`;
+        }
+
+        // ============================================
+        // CONSTRUCTION DE L'ARBRE
+        // ============================================
+
+        function buildTreeHTML(nodeId, isRoot = false) {
+            const node = usersMap[nodeId];
+            if (!node) return null;
+
+            let nodeClass = 'tree-node-content';
+            if (isRoot) nodeClass += ' root';
+            if (node.statut === 'suspendu') nodeClass += ' suspended';
+
+            const positionLabel = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : '';
+            const initials = getInitials(node.prenom, node.nom);
+
+            let badges = '';
+            if (positionLabel) badges += `<span class="badge badge-pos">${positionLabel}</span>`;
+            if (node.statut === 'suspendu') badges += `<span class="badge badge-suspended">Suspendu</span>`;
+
+            let html = `
+                <div class="tree-node">
+                    <div class="${nodeClass}">
+                        <div class="node-avatar">${initials}</div>
+                        <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
+                        <div class="node-code">${node.codeMembre || '---'}</div>
+                        ${badges ? `<div class="node-badges">${badges}</div>` : ''}
+                    </div>
+            `;
+
+            const hasLeft = node.leftChildId && usersMap[node.leftChildId];
+            const hasRight = node.rightChildId && usersMap[node.rightChildId];
+
+            if (hasLeft || hasRight) {
+                html += `<div class="tree-children">`;
+
+                if (hasLeft) {
+                    html += `<div class="tree-child">${buildTreeHTML(node.leftChildId)}</div>`;
+                } else {
+                    html += `<div class="tree-child"><div class="tree-node-content empty"><i class="fas fa-plus empty-icon"></i><div class="node-name">Libre</div></div></div>`;
+                }
+
+                if (hasRight) {
+                    html += `<div class="tree-child">${buildTreeHTML(node.rightChildId)}</div>`;
+                } else {
+                    html += `<div class="tree-child"><div class="tree-node-content empty"><i class="fas fa-plus empty-icon"></i><div class="node-name">Libre</div></div></div>`;
+                }
+
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        // ============================================
+        // STATISTIQUES
+        // ============================================
+
+        function calculateStats() {
+            const total = Object.keys(usersMap).length;
+
+            let rootId = null;
+            for (const [id, data] of Object.entries(usersMap)) {
+                if (!data.position) { rootId = id; break; }
+            }
+
+            let levels = {};
+            let feuilles = 0;
+
+            if (rootId) {
+                const queue = [{ id: rootId, level: 0 }];
+                const visited = new Set();
+
+                while (queue.length > 0) {
+                    const { id, level } = queue.shift();
+                    if (visited.has(id)) continue;
+                    visited.add(id);
+
+                    if (!levels[level]) levels[level] = 0;
+                    levels[level]++;
+
+                    const node = usersMap[id];
+                    let hasChildren = false;
+
+                    if (node.leftChildId && usersMap[node.leftChildId]) {
+                        hasChildren = true;
+                        queue.push({ id: node.leftChildId, level: level + 1 });
+                    }
+                    if (node.rightChildId && usersMap[node.rightChildId]) {
+                        hasChildren = true;
+                        queue.push({ id: node.rightChildId, level: level + 1 });
+                    }
+
+                    if (!hasChildren) feuilles++;
+                }
+            }
+
+            const niveaux = Object.keys(levels).length;
+            const racineNom = rootId && usersMap[rootId] ?
+                `${usersMap[rootId].prenom} ${usersMap[rootId].nom}` : '-';
+
+            return { total, niveaux, feuilles, racineNom };
+        }
+
+        // ============================================
+        // CHARGEMENT
+        // ============================================
+
+        async function loadTree() {
+            try {
+                const snapshot = await db.collection('users').get();
+                usersMap = {};
+                snapshot.forEach(doc => {
+                    usersMap[doc.id] = doc.data();
+                });
+
+                const stats = calculateStats();
+                document.getElementById('statTotal').textContent = stats.total;
+                document.getElementById('statNiveaux').textContent = stats.niveaux;
+                document.getElementById('statFeuilles').textContent = stats.feuilles;
+                document.getElementById('statRacine').textContent = stats.racineNom;
+                document.getElementById('totalMembres').textContent = stats.total + ' membres';
+
+                let rootId = null;
+                for (const [id, data] of Object.entries(usersMap)) {
+                    if (!data.position) { rootId = id; break; }
+                }
+
+                const container = document.getElementById('treeContent');
+                if (rootId && usersMap[rootId]) {
+                    container.innerHTML = buildTreeHTML(rootId, true);
+                } else {
+                    container.innerHTML = `
+                        <div class="text-slate-400 text-center py-10">
+                            <i class="fas fa-tree text-4xl mb-2"></i>
+                            <p>Aucun arbre disponible</p>
+                            <p class="text-sm mt-2">Ajoutez votre premier membre depuis l'admin</p>
+                        </div>
+                    `;
+                }
+
+                adjustTreeAlignment();
+
+            } catch (error) {
+                console.error('Erreur chargement:', error);
+                document.getElementById('treeContent').innerHTML = `
+                    <div class="text-red-500 text-center py-10">
+                        <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+                        <p>Erreur lors du chargement</p>
+                        <button onclick="loadTree()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg">
+                            Réessayer
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // RAFRAÎCHISSEMENT
+        // ============================================
+
+        document.getElementById('refreshTree').addEventListener('click', function() {
+            showToast('🔄 Rafraîchissement...');
+            loadTree();
+        });
+
+        // ============================================
+        // INITIALISATION
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', loadTree);
+    </script>
+</body>
+</html>
