@@ -64,7 +64,6 @@
         .tree-wrapper {
             display: flex;
             justify-content: center;
-            justify-content: safe center;
             align-items: flex-start;
             min-width: 100%;
             min-height: 100%;
@@ -138,11 +137,11 @@
             color: var(--ink);
             line-height: 1.2;
         }
-        .tree-node-content .node-code {
+        .tree-node-content .node-email {
             font-size: 10.5px;
             color: #94a3b8;
             font-weight: 500;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
             margin-top: 2px;
         }
         .node-badges {
@@ -172,15 +171,15 @@
             border: 1.5px solid rgba(255,255,255,0.5);
         }
         .tree-node-content.root .node-name { color: #ffffff; font-size: 14.5px; }
-        .tree-node-content.root .node-code { color: rgba(255,255,255,0.75); }
+        .tree-node-content.root .node-email { color: rgba(255,255,255,0.75); }
 
-        /* ===== CONNECTORS ===== */
+        /* ===== CONNECTORS SANS COUPURE ===== */
         .tree-children {
             display: flex;
             justify-content: center;
-            gap: 36px;
-            margin-top: 30px;
-            padding-top: 30px;
+            gap: 48px;
+            margin-top: 28px;
+            padding-top: 28px;
             position: relative;
         }
         .tree-children::before {
@@ -189,37 +188,54 @@
             top: 0;
             left: 50%;
             width: 2.5px;
-            height: 16px;
+            height: 28px;
             background: var(--line-color-strong);
             transform: translateX(-1.25px);
+            border-radius: 2px;
         }
         .tree-child {
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
-            padding-top: 14px;
+            flex: 1;
+            max-width: 300px;
+            min-width: 100px;
         }
+        /* Ligne verticale du parent vers l'enfant (continue) */
+        .tree-child .tree-node::before {
+            content: '';
+            position: absolute;
+            top: -28px;
+            left: 50%;
+            width: 2.5px;
+            height: 28px;
+            background: var(--line-color-strong);
+            transform: translateX(-1.25px);
+            z-index: 1;
+            border-radius: 2px;
+        }
+        /* Ligne horizontale entre les enfants (continue) */
         .tree-child::before {
             content: '';
             position: absolute;
-            top: 16px;
-            left: 50%;
-            width: 2.5px;
-            height: 14px;
-            background: var(--line-color);
-            transform: translateX(-1.25px);
-        }
-        .tree-child::after {
-            content: '';
-            position: absolute;
-            top: 15px;
+            top: -28px;
             height: 2.5px;
-            background: var(--line-color);
+            background: var(--line-color-strong);
+            z-index: 1;
+            border-radius: 2px;
         }
-        .tree-child:first-child::after { left: 50%; width: 50%; }
-        .tree-child:last-child::after  { right: 50%; width: 50%; }
-        .tree-child:only-child::after  { left: 50%; width: 0; }
+        .tree-child:first-child::before {
+            left: 50%;
+            right: 0;
+        }
+        .tree-child:last-child::before {
+            left: 0;
+            right: 50%;
+        }
+        .tree-child:only-child::before {
+            display: none;
+        }
 
         /* ===== FREE SLOT ===== */
         .free-slot {
@@ -289,7 +305,37 @@
             user-select: none;
         }
 
-        /* ===== MEMBER DETAILS — BOTTOM SHEET ===== */
+        /* ===== FLOATING ADD BUTTON ===== */
+        .fab {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+            color: white;
+            border: none;
+            box-shadow: 0 8px 24px rgba(79,70,229,0.45);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .fab:hover {
+            transform: scale(1.08);
+            box-shadow: 0 12px 32px rgba(79,70,229,0.55);
+        }
+        .fab:active {
+            transform: scale(0.92);
+        }
+        .fab i { transition: transform 0.3s ease; }
+        .fab.open i { transform: rotate(45deg); }
+
+        /* ===== SHEET ===== */
         .sheet-overlay {
             position: fixed;
             inset: 0;
@@ -338,16 +384,36 @@
         }
         .detail-input:focus { outline: none; border-color: var(--brand-1); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
 
+        /* Formulaire dans la sheet */
+        .sheet-form-group { margin-bottom: 14px; }
+        .sheet-form-group label { font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px; }
+        .sheet-form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+        .sheet-form-group input:focus {
+            outline: none;
+            border-color: var(--brand-1);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+        }
+
         @media (max-width: 768px) {
             .tree-children { gap: 18px; }
             .tree-node-content { min-width: 92px; padding: 10px 12px; }
             .node-avatar { width: 30px; height: 30px; font-size: 11px; }
             .tree-node-content .node-name { font-size: 11.5px; }
-            .tree-node-content .node-code { font-size: 9.5px; }
+            .tree-node-content .node-email { font-size: 9.5px; }
             .free-slot { min-width: 92px; min-height: 54px; }
             .free-slot .add-btn i { font-size: 16px; }
             .zoom-btn { width: 28px; height: 28px; font-size: 12px; }
             .zoom-level { font-size: 10px; min-width: 32px; }
+            .fab { width: 48px; height: 48px; font-size: 20px; bottom: 20px; right: 20px; }
         }
     </style>
 </head>
@@ -381,7 +447,7 @@
                 <span class="ml-3 text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full">Admin</span>
             </div>
             <a href="arbre.html" class="text-slate-400 hover:text-slate-700 transition text-sm font-medium">
-                <i class="fas fa-home mr-1"></i> Arbre complet 
+                <i class="fas fa-home mr-1"></i> Arbre complet
             </a>
         </div>
     </header>
@@ -463,7 +529,7 @@
                     </div>
                 </div>
                 <div class="mt-3 text-xs text-slate-400 text-center">
-                    <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette — la zone reste scrollable à 100%
+                    <i class="fas fa-mouse-pointer mr-1"></i> Utilisez les boutons pour zoomer, ou Ctrl/Cmd + molette
                 </div>
             </div>
 
@@ -547,30 +613,9 @@
                 </div>
             </div>
 
-            <!-- Formulaire -->
-            <div id="addMemberSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-                <h2 class="text-lg font-bold text-slate-800 mb-4">
-                    <i class="fas fa-user-plus text-indigo-600 mr-2"></i> Ajouter un membre
-                    <span id="parentInfo" class="text-sm font-normal text-slate-400"></span>
-                </h2>
-                <form id="addMemberForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="hidden" id="parentIdField" value="">
-                    <input type="hidden" id="positionField" value="">
-                    <input type="text" id="nom" placeholder="Nom *" required
-                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                    <input type="text" id="prenom" placeholder="Prénom *" required
-                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                    <input type="tel" id="telephone" placeholder="Téléphone *" required
-                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                    <input type="email" id="email" placeholder="Email *" required
-                           class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                    <input type="text" id="codeParrain" placeholder="Code parrain (auto)"
-                           class="px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none text-slate-400" readonly>
-                    <button type="submit" class="px-6 py-2.5 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200">
-                        <i class="fas fa-plus mr-2"></i> Ajouter
-                    </button>
-                </form>
-                <div id="formMessage" class="mt-3 text-sm hidden"></div>
+            <!-- Formulaire rapide (caché, remplacé par le FAB) -->
+            <div id="addMemberSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+                <!-- contenu déplacé dans la sheet -->
             </div>
 
             <!-- Liste -->
@@ -593,7 +638,7 @@
                                 <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Nom</th>
                                 <th class="text-left py-2.5 hidden md:table-cell font-semibold text-xs uppercase tracking-wide">Prénom</th>
                                 <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Email</th>
-                                <th class="text-left py-2.5 hidden lg:table-cell font-semibold text-xs uppercase tracking-wide">Numéro</th>
+                                <th class="text-left py-2.5 hidden lg:table-cell font-semibold text-xs uppercase tracking-wide">Téléphone</th>
                                 <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Statut</th>
                                 <th class="text-right py-2.5 font-semibold text-xs uppercase tracking-wide">Actions</th>
                             </tr>
@@ -605,48 +650,64 @@
         </div>
     </main>
 
-    <!-- Modal -->
-    <div id="addModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-overlay absolute inset-0" onclick="closeAddModal()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
+    <!-- Floating Action Button -->
+    <button id="fabAddMember" class="fab" title="Ajouter un membre" onclick="openAddSheet()">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Sheet d'ajout de membre -->
+    <div id="addSheetOverlay" class="sheet-overlay" onclick="closeAddSheet()"></div>
+    <div id="addMemberSheet" class="member-sheet">
+        <div class="sheet-inner">
+            <div class="sheet-handle"></div>
+            <div class="flex items-center justify-between mb-4">
                 <h3 class="text-xl font-bold text-slate-800">
-                    <i class="fas fa-user-plus text-indigo-600 mr-2"></i> Ajouter un filleul
+                    <i class="fas fa-user-plus text-indigo-600 mr-2"></i> Ajouter un membre
                 </h3>
-                <button onclick="closeAddModal()" class="text-slate-300 hover:text-slate-600 transition">
-                    <i class="fas fa-times text-xl"></i>
+                <button onclick="closeAddSheet()" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-            <p class="text-sm text-slate-500 mb-4 bg-slate-50 rounded-lg px-3 py-2" id="modalParentInfo">Position sous: ...</p>
-            <form id="modalAddForm" class="space-y-4">
-                <input type="hidden" id="modalParentId" value="">
-                <input type="hidden" id="modalPosition" value="">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-600">Nom *</label>
-                        <input type="text" id="modalNom" required
-                               class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-600">Prénom *</label>
-                        <input type="text" id="modalPrenom" required
-                               class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                    </div>
+
+            <p class="text-sm text-slate-500 mb-4 bg-slate-50 rounded-lg px-3 py-2" id="addSheetParentInfo">
+                Position: <span class="font-medium">Racine</span> — Email du parrain: <span class="font-medium text-slate-700">Aucun (Grand Parrain)</span>
+            </p>
+
+            <form id="addSheetForm">
+                <input type="hidden" id="addSheetParentId" value="">
+                <input type="hidden" id="addSheetPosition" value="">
+
+                <div class="sheet-form-group">
+                    <label>Nom *</label>
+                    <input type="text" id="addSheetNom" placeholder="Nom du membre" required>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600">Téléphone *</label>
-                    <input type="tel" id="modalTelephone" required
-                           class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+
+                <div class="sheet-form-group">
+                    <label>Prénom *</label>
+                    <input type="text" id="addSheetPrenom" placeholder="Prénom du membre" required>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600">Email *</label>
-                    <input type="email" id="modalEmail" required
-                           class="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+
+                <div class="sheet-form-group">
+                    <label>Téléphone *</label>
+                    <input type="tel" id="addSheetTelephone" placeholder="06 12 34 56 78" required>
                 </div>
-                <div id="modalError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
-                <button type="submit" class="w-full py-3 px-4 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200">
-                    <i class="fas fa-spinner fa-spin hidden mr-2" id="modalLoading"></i>
-                    <span id="modalBtnText">Ajouter le filleul</span>
+
+                <div class="sheet-form-group">
+                    <label>Email du membre *</label>
+                    <input type="email" id="addSheetEmail" placeholder="email@exemple.com" required>
+                </div>
+
+                <div class="sheet-form-group">
+                    <label>Email du parrain (laisser vide si Grand Parrain)</label>
+                    <input type="email" id="addSheetParrainEmail" placeholder="email.parrain@exemple.com">
+                    <p class="text-xs text-slate-400 mt-1">Si vide, le membre sera placé comme racine (Grand Parrain)</p>
+                </div>
+
+                <div id="addSheetError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mt-2"></div>
+
+                <button type="submit" class="w-full py-3 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200 mt-2">
+                    <i class="fas fa-spinner fa-spin hidden mr-2" id="addSheetLoading"></i>
+                    <span id="addSheetBtnText">Ajouter le membre</span>
                 </button>
             </form>
         </div>
@@ -677,21 +738,6 @@
             const wrapper = document.getElementById('treeWrapper');
             wrapper.style.transform = `scale(${currentZoom})`;
             document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
-            adjustTreeAlignment();
-        }
-
-        // Filet de sécurité pour les navigateurs sans support de "safe center" :
-        // si le contenu déborde le conteneur, on aligne à gauche pour garder
-        // tout le contenu accessible au scroll (sinon la partie gauche reste
-        // hors d'atteinte car scrollLeft ne peut pas être négatif).
-        function adjustTreeAlignment() {
-            const wrapper = document.getElementById('treeWrapper');
-            const container = document.getElementById('treeContainer');
-            if (!wrapper || !container) return;
-            requestAnimationFrame(() => {
-                const overflowing = wrapper.scrollWidth > container.clientWidth + 1;
-                wrapper.style.justifyContent = overflowing ? 'flex-start' : 'center';
-            });
         }
 
         function zoomIn() {
@@ -720,11 +766,8 @@
         document.getElementById('treeContainer').addEventListener('wheel', function(e) {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
-                if (e.deltaY < 0) {
-                    zoomIn();
-                } else {
-                    zoomOut();
-                }
+                if (e.deltaY < 0) zoomIn();
+                else zoomOut();
             }
         }, { passive: false });
 
@@ -988,12 +1031,13 @@
         }
 
         // ============================================
-        // AJOUTER MEMBRE
+        // AJOUTER MEMBRE (avec email du parrain)
         // ============================================
 
         async function ajouterMembre(data) {
-            const { nom, prenom, telephone, email, parentId, position, codeParrain } = data;
+            const { nom, prenom, telephone, email, parrainEmail } = data;
 
+            // Vérifier email unique
             const emailCheck = await db.collection('users')
                 .where('email', '==', email)
                 .limit(1)
@@ -1005,30 +1049,33 @@
 
             const codeMembre = await generateMemberCode();
 
-            let finalParentId = parentId;
-            let finalPosition = position;
-
-            if (!finalParentId) {
-                const rootId = await findRoot();
-                if (!rootId) {
-                    finalParentId = null;
-                    finalPosition = null;
-                } else {
-                    const pos = await findNextAvailablePosition(rootId);
-                    finalParentId = pos.parentId;
-                    finalPosition = pos.position;
-                }
-            }
-
-            let parrainCode = codeParrain;
+            let finalParentId = null;
+            let finalPosition = null;
             let parrainId = null;
 
-            if (finalParentId) {
-                const parentData = usersMap[finalParentId];
-                if (parentData) {
-                    parrainCode = parentData.codeMembre;
-                    parrainId = finalParentId;
+            // Si un email de parrain est fourni, chercher le parrain
+            if (parrainEmail && parrainEmail.trim() !== '') {
+                const parrainQuery = await db.collection('users')
+                    .where('email', '==', parrainEmail.trim())
+                    .limit(1)
+                    .get();
+
+                if (parrainQuery.empty) {
+                    throw new Error('Email du parrain introuvable');
                 }
+
+                const parrainDoc = parrainQuery.docs[0];
+                parrainId = parrainDoc.id;
+
+                // Trouver la racine pour le placement
+                const rootId = await findRoot();
+                if (!rootId) {
+                    throw new Error('Aucune racine trouvée dans l\'arbre');
+                }
+
+                const pos = await findNextAvailablePosition(rootId);
+                finalParentId = pos.parentId;
+                finalPosition = pos.position;
             }
 
             const userData = {
@@ -1037,7 +1084,7 @@
                 prenom: prenom,
                 telephone: telephone,
                 email: email,
-                codeParrain: parrainCode,
+                codeParrain: parrainId ? usersMap[parrainId]?.codeMembre : null,
                 parrainId: parrainId,
                 parentId: finalParentId,
                 position: finalPosition,
@@ -1060,7 +1107,8 @@
             return {
                 success: true,
                 id: docRef.id,
-                codeMembre: codeMembre
+                codeMembre: codeMembre,
+                isRoot: !parrainEmail || parrainEmail.trim() === ''
             };
         }
 
@@ -1140,10 +1188,6 @@
             if (sheetOpen) closeSheetUI();
         });
 
-        window.addEventListener('resize', function() {
-            adjustTreeAlignment();
-        });
-
         function renderTreeOnly() {
             let rootId = null;
             for (const [id, data] of Object.entries(usersMap)) {
@@ -1154,7 +1198,6 @@
             if (rootId && usersMap[rootId]) {
                 container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
             }
-            adjustTreeAlignment();
         }
 
         function enableEditMode() {
@@ -1243,7 +1286,7 @@
                 return;
             }
 
-            const confirmDelete = window.confirm(`Supprimer définitivement ${node.prenom} ${node.nom} (${node.codeMembre}) ?`);
+            const confirmDelete = window.confirm(`Supprimer définitivement ${node.prenom} ${node.nom} ?`);
             if (!confirmDelete) return;
 
             try {
@@ -1286,6 +1329,7 @@
                         <span class="gen-tag">Gén. ${generation}</span>
                         <div class="node-avatar">${initials}</div>
                         <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
+                        <div class="node-email">${node.email || '---'}</div>
                         ${positionLabel ? `<div class="node-badges"><span class="badge badge-pos">${positionLabel}</span></div>` : ''}
                     </div>
             `;
@@ -1300,7 +1344,7 @@
             } else {
                 html += `
                     <div class="tree-child">
-                        <div class="free-slot" onclick="openAddModal('${nodeId}', 'left', '${node.email}', '${node.prenom} ${node.nom}')">
+                        <div class="free-slot" onclick="openAddSheetWithParent('${nodeId}', 'left', '${node.email}', '${node.prenom} ${node.nom}')">
                             <div class="add-btn">
                                 <i class="fas fa-plus-circle"></i>
                                 <span>Ajouter</span>
@@ -1315,7 +1359,7 @@
             } else {
                 html += `
                     <div class="tree-child">
-                        <div class="free-slot" onclick="openAddModal('${nodeId}', 'right', '${node.email}', '${node.prenom} ${node.nom}')">
+                        <div class="free-slot" onclick="openAddSheetWithParent('${nodeId}', 'right', '${node.email}', '${node.prenom} ${node.nom}')">
                             <div class="add-btn">
                                 <i class="fas fa-plus-circle"></i>
                                 <span>Ajouter</span>
@@ -1345,19 +1389,16 @@
 
                 currentGenMap = {};
                 const container = document.getElementById('treeContent');
-                const addSection = document.getElementById('addMemberSection');
                 if (rootId && usersMap[rootId]) {
                     container.innerHTML = buildTreeWithAddButtons(rootId, true, 1);
-                    addSection.classList.add('hidden');
                 } else {
                     container.innerHTML = `
                         <div class="text-slate-400 text-center py-6">
                             <i class="fas fa-tree text-3xl mb-2"></i>
                             <p>Aucun arbre</p>
-                            <p class="text-sm mt-1">Ajoutez le premier membre via le formulaire</p>
+                            <p class="text-sm mt-1">Ajoutez le premier membre via le bouton <i class="fas fa-plus-circle text-indigo-500"></i></p>
                         </div>
                     `;
-                    addSection.classList.remove('hidden');
                 }
 
                 resetZoom();
@@ -1373,49 +1414,64 @@
         });
 
         // ============================================
-        // MODAL AJOUT
+        // ADD SHEET (FAB)
         // ============================================
 
-        function openAddModal(parentId, position, parentEmail, parentName) {
-            document.getElementById('modalParentId').value = parentId;
-            document.getElementById('modalPosition').value = position;
-            document.getElementById('modalParentInfo').textContent =
-                `Position: ${position === 'left' ? 'Gauche' : 'Droite'} sous ${parentName} (${parentEmail})`;
-
-            document.getElementById('addModal').classList.remove('hidden');
-            document.getElementById('modalAddForm').reset();
-            document.getElementById('modalError').classList.add('hidden');
+        function openAddSheet() {
+            document.getElementById('addSheetParentId').value = '';
+            document.getElementById('addSheetPosition').value = '';
+            document.getElementById('addSheetParrainEmail').value = '';
+            document.getElementById('addSheetParentInfo').innerHTML = `
+                Position: <span class="font-medium">Racine</span> — Email du parrain: <span class="font-medium text-slate-700">Aucun (Grand Parrain)</span>
+            `;
+            document.getElementById('addSheetForm').reset();
+            document.getElementById('addSheetError').classList.add('hidden');
+            document.getElementById('addSheetOverlay').classList.add('open');
+            document.getElementById('addMemberSheet').classList.add('open');
         }
 
-        function closeAddModal() {
-            document.getElementById('addModal').classList.add('hidden');
+        function openAddSheetWithParent(parentId, position, parentEmail, parentName) {
+            document.getElementById('addSheetParentId').value = parentId;
+            document.getElementById('addSheetPosition').value = position;
+            document.getElementById('addSheetParrainEmail').value = parentEmail;
+            document.getElementById('addSheetParentInfo').innerHTML = `
+                Position: <span class="font-medium">${position === 'left' ? 'Gauche' : 'Droite'}</span> — 
+                Email du parrain: <span class="font-medium text-slate-700">${parentEmail}</span>
+                <br><span class="text-xs text-slate-400">(${parentName})</span>
+            `;
+            document.getElementById('addSheetForm').reset();
+            document.getElementById('addSheetError').classList.add('hidden');
+            document.getElementById('addSheetOverlay').classList.add('open');
+            document.getElementById('addMemberSheet').classList.add('open');
         }
 
-        document.getElementById('addModal').addEventListener('click', function(e) {
-            if (e.target === this) closeAddModal();
-        });
+        function closeAddSheet() {
+            document.getElementById('addSheetOverlay').classList.remove('open');
+            document.getElementById('addMemberSheet').classList.remove('open');
+        }
+
+        document.getElementById('addSheetOverlay').addEventListener('click', closeAddSheet);
 
         // ============================================
-        // MODAL AJOUT SUBMIT
+        // ADD SHEET SUBMIT
         // ============================================
 
-        document.getElementById('modalAddForm').addEventListener('submit', async function(e) {
+        document.getElementById('addSheetForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const parentId = document.getElementById('modalParentId').value;
-            const position = document.getElementById('modalPosition').value;
-            const nom = document.getElementById('modalNom').value.trim();
-            const prenom = document.getElementById('modalPrenom').value.trim();
-            const telephone = document.getElementById('modalTelephone').value.trim();
-            const email = document.getElementById('modalEmail').value.trim();
+            const nom = document.getElementById('addSheetNom').value.trim();
+            const prenom = document.getElementById('addSheetPrenom').value.trim();
+            const telephone = document.getElementById('addSheetTelephone').value.trim();
+            const email = document.getElementById('addSheetEmail').value.trim();
+            const parrainEmail = document.getElementById('addSheetParrainEmail').value.trim();
 
-            const errorDiv = document.getElementById('modalError');
+            const errorDiv = document.getElementById('addSheetError');
             const submitBtn = this.querySelector('button[type="submit"]');
-            const loading = document.getElementById('modalLoading');
-            const btnText = document.getElementById('modalBtnText');
+            const loading = document.getElementById('addSheetLoading');
+            const btnText = document.getElementById('addSheetBtnText');
 
             if (!nom || !prenom || !telephone || !email) {
-                errorDiv.textContent = 'Tous les champs sont obligatoires';
+                errorDiv.textContent = 'Tous les champs sont obligatoires (sauf email du parrain)';
                 errorDiv.classList.remove('hidden');
                 return;
             }
@@ -1428,14 +1484,13 @@
             try {
                 const result = await ajouterMembre({
                     nom, prenom, telephone, email,
-                    parentId: parentId,
-                    position: position,
-                    codeParrain: null
+                    parrainEmail: parrainEmail || null
                 });
 
                 if (result.success) {
-                    showToast(`✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`, 'success');
-                    closeAddModal();
+                    const rootMsg = result.isRoot ? ' (Grand Parrain)' : '';
+                    showToast(`✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}${rootMsg}`, 'success');
+                    closeAddSheet();
                     await loadAdminData();
                 }
             } catch (error) {
@@ -1444,53 +1499,8 @@
                 errorDiv.classList.remove('hidden');
             } finally {
                 loading.classList.add('hidden');
-                btnText.textContent = 'Ajouter le filleul';
+                btnText.textContent = 'Ajouter le membre';
                 submitBtn.disabled = false;
-            }
-        });
-
-        // ============================================
-        // FORMULAIRE PRINCIPAL
-        // ============================================
-
-        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const nom = document.getElementById('nom').value.trim();
-            const prenom = document.getElementById('prenom').value.trim();
-            const telephone = document.getElementById('telephone').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const parentId = document.getElementById('parentIdField').value || null;
-            const position = document.getElementById('positionField').value || null;
-
-            const message = document.getElementById('formMessage');
-
-            if (!nom || !prenom || !telephone || !email) {
-                message.className = 'mt-3 text-sm text-red-600';
-                message.textContent = 'Tous les champs sont obligatoires';
-                message.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                const result = await ajouterMembre({
-                    nom, prenom, telephone, email,
-                    parentId: parentId,
-                    position: position,
-                    codeParrain: null
-                });
-
-                if (result.success) {
-                    message.className = 'mt-3 text-sm text-emerald-600';
-                    message.textContent = `✅ ${prenom} ${nom} ajouté ! Code: ${result.codeMembre}`;
-                    message.classList.remove('hidden');
-                    document.getElementById('addMemberForm').reset();
-                    await loadAdminData();
-                }
-            } catch (error) {
-                message.className = 'mt-3 text-sm text-red-600';
-                message.textContent = '❌ ' + error.message;
-                message.classList.remove('hidden');
             }
         });
     </script>
