@@ -144,6 +144,13 @@
             letter-spacing: 0.2px;
             margin-top: 2px;
         }
+        .tree-node-content .node-snec {
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            margin-top: 1px;
+        }
         .node-badges {
             display: flex;
             justify-content: center;
@@ -172,6 +179,7 @@
         }
         .tree-node-content.root .node-name { color: #ffffff; font-size: 14.5px; }
         .tree-node-content.root .node-email { color: rgba(255,255,255,0.75); }
+        .tree-node-content.root .node-snec { color: rgba(255,255,255,0.6); }
 
         /* ===== CONNECTORS SANS COUPURE ===== */
         .tree-children {
@@ -202,7 +210,6 @@
             max-width: 300px;
             min-width: 100px;
         }
-        /* Ligne verticale du parent vers l'enfant (continue) */
         .tree-child .tree-node::before {
             content: '';
             position: absolute;
@@ -215,7 +222,6 @@
             z-index: 1;
             border-radius: 2px;
         }
-        /* Ligne horizontale entre les enfants (continue) */
         .tree-child::before {
             content: '';
             position: absolute;
@@ -225,17 +231,9 @@
             z-index: 1;
             border-radius: 2px;
         }
-        .tree-child:first-child::before {
-            left: 50%;
-            right: 0;
-        }
-        .tree-child:last-child::before {
-            left: 0;
-            right: 50%;
-        }
-        .tree-child:only-child::before {
-            display: none;
-        }
+        .tree-child:first-child::before { left: 50%; right: 0; }
+        .tree-child:last-child::before { left: 0; right: 50%; }
+        .tree-child:only-child::before { display: none; }
 
         /* ===== FREE SLOT ===== */
         .free-slot {
@@ -325,13 +323,8 @@
             justify-content: center;
             font-size: 24px;
         }
-        .fab:hover {
-            transform: scale(1.08);
-            box-shadow: 0 12px 32px rgba(79,70,229,0.55);
-        }
-        .fab:active {
-            transform: scale(0.92);
-        }
+        .fab:hover { transform: scale(1.08); box-shadow: 0 12px 32px rgba(79,70,229,0.55); }
+        .fab:active { transform: scale(0.92); }
         .fab i { transition: transform 0.3s ease; }
         .fab.open i { transform: rotate(45deg); }
 
@@ -384,7 +377,6 @@
         }
         .detail-input:focus { outline: none; border-color: var(--brand-1); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
 
-        /* Formulaire dans la sheet */
         .sheet-form-group { margin-bottom: 14px; }
         .sheet-form-group label { font-size: 12px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px; }
         .sheet-form-group input {
@@ -402,6 +394,11 @@
             background: white;
             box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
         }
+        .sheet-form-group .hint {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 3px;
+        }
 
         @media (max-width: 768px) {
             .tree-children { gap: 18px; }
@@ -409,6 +406,7 @@
             .node-avatar { width: 30px; height: 30px; font-size: 11px; }
             .tree-node-content .node-name { font-size: 11.5px; }
             .tree-node-content .node-email { font-size: 9.5px; }
+            .tree-node-content .node-snec { font-size: 8.5px; }
             .free-slot { min-width: 92px; min-height: 54px; }
             .free-slot .add-btn i { font-size: 16px; }
             .zoom-btn { width: 28px; height: 28px; font-size: 12px; }
@@ -498,7 +496,7 @@
             <div class="tree-card bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
                     <h2 class="text-lg font-bold text-slate-800">
-                        <i class="fas fa-sitemap text-indigo-600 mr-2"></i> GRANDE EQUIPE — cliquez sur un membre ou une place libre
+                        <i class="fas fa-sitemap text-indigo-600 mr-2"></i> Arbre — cliquez sur un membre ou une place libre
                     </h2>
                     <div class="flex items-center gap-2">
                         <div class="zoom-controls">
@@ -560,6 +558,8 @@
                         <div id="detailFields">
                             <div class="detail-field"><div class="label">Téléphone</div><div class="value" id="fieldTelephone"></div></div>
                             <div class="detail-field"><div class="label">Email</div><div class="value" id="fieldEmail"></div></div>
+                            <div class="detail-field"><div class="label">ID SNEC</div><div class="value" id="fieldSnecId"></div></div>
+                            <div class="detail-field"><div class="label">ID MLM Center</div><div class="value" id="fieldMlmId"></div></div>
                             <div class="detail-field"><div class="label">Parrain</div><div class="value" id="fieldParrain"></div></div>
                             <div class="detail-field"><div class="label">Position</div><div class="value" id="fieldPosition"></div></div>
                         </div>
@@ -580,6 +580,14 @@
                             <div>
                                 <label class="text-xs font-semibold text-slate-500">Email</label>
                                 <input type="email" id="editEmail" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">ID SNEC</label>
+                                <input type="text" id="editSnecId" class="detail-input">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500">ID MLM Center</label>
+                                <input type="text" id="editMlmId" class="detail-input">
                             </div>
                             <div>
                                 <label class="text-xs font-semibold text-slate-500">Statut</label>
@@ -613,11 +621,6 @@
                 </div>
             </div>
 
-            <!-- Formulaire rapide (caché, remplacé par le FAB) -->
-            <div id="addMemberSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-                <!-- contenu déplacé dans la sheet -->
-            </div>
-
             <!-- Liste -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                 <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
@@ -638,7 +641,7 @@
                                 <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Nom</th>
                                 <th class="text-left py-2.5 hidden md:table-cell font-semibold text-xs uppercase tracking-wide">Prénom</th>
                                 <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Email</th>
-                                <th class="text-left py-2.5 hidden lg:table-cell font-semibold text-xs uppercase tracking-wide">Téléphone</th>
+                                <th class="text-left py-2.5 hidden lg:table-cell font-semibold text-xs uppercase tracking-wide">ID SNEC</th>
                                 <th class="text-left py-2.5 font-semibold text-xs uppercase tracking-wide">Statut</th>
                                 <th class="text-right py-2.5 font-semibold text-xs uppercase tracking-wide">Actions</th>
                             </tr>
@@ -698,9 +701,27 @@
                 </div>
 
                 <div class="sheet-form-group">
+                    <label>ID SNEC</label>
+                    <input type="text" id="addSheetSnecId" placeholder="SNEC-XXXXXX">
+                    <div class="hint">Numéro d'identification SNEC</div>
+                </div>
+
+                <div class="sheet-form-group">
+                    <label>ID MLM Center</label>
+                    <input type="text" id="addSheetMlmId" placeholder="MLM-XXXXXX">
+                    <div class="hint">Numéro d'identification MLM Center</div>
+                </div>
+
+                <div class="sheet-form-group">
+                    <label>MLM Center Password</label>
+                    <input type="password" id="addSheetMlmPassword" placeholder="Mot de passe MLM Center">
+                    <div class="hint">Mot de passe pour l'accès MLM Center</div>
+                </div>
+
+                <div class="sheet-form-group">
                     <label>Email du parrain (laisser vide si Grand Parrain)</label>
                     <input type="email" id="addSheetParrainEmail" placeholder="email.parrain@exemple.com">
-                    <p class="text-xs text-slate-400 mt-1">Si vide, le membre sera placé comme racine (Grand Parrain)</p>
+                    <div class="hint">Si vide, le membre sera placé comme racine</div>
                 </div>
 
                 <div id="addSheetError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mt-2"></div>
@@ -855,7 +876,9 @@
                     m.nom?.toLowerCase().includes(searchTerm) ||
                     m.prenom?.toLowerCase().includes(searchTerm) ||
                     m.email?.toLowerCase().includes(searchTerm) ||
-                    m.telephone?.includes(searchTerm)
+                    m.telephone?.includes(searchTerm) ||
+                    m.snecId?.toLowerCase().includes(searchTerm) ||
+                    m.mlmId?.toLowerCase().includes(searchTerm)
                 );
             }
 
@@ -882,7 +905,7 @@
                     <td class="py-3 font-medium text-slate-700">${m.nom || '---'}</td>
                     <td class="py-3 hidden md:table-cell text-slate-600">${m.prenom || '---'}</td>
                     <td class="py-3 text-slate-500">${m.email || '---'}</td>
-                    <td class="py-3 hidden lg:table-cell text-slate-500">${m.telephone || '---'}</td>
+                    <td class="py-3 hidden lg:table-cell text-slate-500">${m.snecId || '---'}</td>
                     <td class="py-3">
                         <span class="status-badge ${m.statut === 'actif' ? 'status-active' : 'status-suspended'}">
                             ${m.statut === 'actif' ? 'Actif' : 'Suspendu'}
@@ -1031,11 +1054,15 @@
         }
 
         // ============================================
-        // AJOUTER MEMBRE (avec email du parrain)
+        // AJOUTER MEMBRE (avec nouveaux champs)
         // ============================================
 
         async function ajouterMembre(data) {
-            const { nom, prenom, telephone, email, parrainEmail } = data;
+            const { 
+                nom, prenom, telephone, email, 
+                parrainEmail,
+                snecId, mlmId, mlmPassword 
+            } = data;
 
             // Vérifier email unique
             const emailCheck = await db.collection('users')
@@ -1053,7 +1080,6 @@
             let finalPosition = null;
             let parrainId = null;
 
-            // Si un email de parrain est fourni, chercher le parrain
             if (parrainEmail && parrainEmail.trim() !== '') {
                 const parrainQuery = await db.collection('users')
                     .where('email', '==', parrainEmail.trim())
@@ -1067,7 +1093,6 @@
                 const parrainDoc = parrainQuery.docs[0];
                 parrainId = parrainDoc.id;
 
-                // Trouver la racine pour le placement
                 const rootId = await findRoot();
                 if (!rootId) {
                     throw new Error('Aucune racine trouvée dans l\'arbre');
@@ -1084,6 +1109,9 @@
                 prenom: prenom,
                 telephone: telephone,
                 email: email,
+                snecId: snecId || null,
+                mlmId: mlmId || null,
+                mlmPassword: mlmPassword || null,
                 codeParrain: parrainId ? usersMap[parrainId]?.codeMembre : null,
                 parrainId: parrainId,
                 parentId: finalParentId,
@@ -1153,6 +1181,8 @@
 
             document.getElementById('fieldTelephone').textContent = node.telephone || '---';
             document.getElementById('fieldEmail').textContent = node.email || '---';
+            document.getElementById('fieldSnecId').textContent = node.snecId || '---';
+            document.getElementById('fieldMlmId').textContent = node.mlmId || '---';
             document.getElementById('fieldParrain').textContent = node.codeParrain || '-';
             document.getElementById('fieldPosition').textContent = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : 'Racine';
 
@@ -1208,6 +1238,8 @@
             document.getElementById('editNom').value = node.nom || '';
             document.getElementById('editTelephone').value = node.telephone || '';
             document.getElementById('editEmail').value = node.email || '';
+            document.getElementById('editSnecId').value = node.snecId || '';
+            document.getElementById('editMlmId').value = node.mlmId || '';
             document.getElementById('editStatut').value = node.statut || 'actif';
 
             document.getElementById('detailFields').classList.add('hidden');
@@ -1242,6 +1274,8 @@
             const nom = document.getElementById('editNom').value.trim();
             const telephone = document.getElementById('editTelephone').value.trim();
             const email = document.getElementById('editEmail').value.trim();
+            const snecId = document.getElementById('editSnecId').value.trim();
+            const mlmId = document.getElementById('editMlmId').value.trim();
             const statut = document.getElementById('editStatut').value;
 
             if (!prenom || !nom || !telephone || !email) {
@@ -1264,7 +1298,7 @@
                 }
 
                 await db.collection('users').doc(selectedMemberId).update({
-                    prenom, nom, telephone, email, statut
+                    prenom, nom, telephone, email, snecId, mlmId, statut
                 });
 
                 showToast('✅ Membre mis à jour', 'success');
@@ -1330,6 +1364,7 @@
                         <div class="node-avatar">${initials}</div>
                         <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
                         <div class="node-email">${node.email || '---'}</div>
+                        ${node.snecId ? `<div class="node-snec">SNEC: ${node.snecId}</div>` : ''}
                         ${positionLabel ? `<div class="node-badges"><span class="badge badge-pos">${positionLabel}</span></div>` : ''}
                     </div>
             `;
@@ -1463,6 +1498,9 @@
             const prenom = document.getElementById('addSheetPrenom').value.trim();
             const telephone = document.getElementById('addSheetTelephone').value.trim();
             const email = document.getElementById('addSheetEmail').value.trim();
+            const snecId = document.getElementById('addSheetSnecId').value.trim();
+            const mlmId = document.getElementById('addSheetMlmId').value.trim();
+            const mlmPassword = document.getElementById('addSheetMlmPassword').value.trim();
             const parrainEmail = document.getElementById('addSheetParrainEmail').value.trim();
 
             const errorDiv = document.getElementById('addSheetError');
@@ -1484,6 +1522,9 @@
             try {
                 const result = await ajouterMembre({
                     nom, prenom, telephone, email,
+                    snecId: snecId || null,
+                    mlmId: mlmId || null,
+                    mlmPassword: mlmPassword || null,
                     parrainEmail: parrainEmail || null
                 });
 
