@@ -52,66 +52,200 @@
         .toast-info { background: #4f46e5; }
         .toast-success { background: #16a34a; }
 
-        /* ===== ARBRE MINIATURE ===== */
-        .mini-tree {
+        /* ===== TREE CONTAINER (identique aux autres pages) ===== */
+        .tree-container {
+            overflow: auto;
+            padding: 40px 24px;
+            background:
+                radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0) 0 0/24px 24px,
+                #f8fafc;
+            border-radius: 14px;
+            position: relative;
+            height: calc(100vh - 320px);
+            min-height: 420px;
+        }
+        .tree-wrapper {
+            display: flex;
+            justify-content: center;
+            justify-content: safe center;
+            align-items: flex-start;
+            min-width: 100%;
+            min-height: 100%;
+            transition: transform 0.3s ease;
+            transform-origin: center top;
+        }
+
+        .tree-node {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 24px 16px;
-            background:
-                radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0) 0 0/22px 22px,
-                #f8fafc;
-            border-radius: 14px;
-            border: 1px solid #e2e8f0;
+            transition: all 0.25s;
         }
-        .mini-tree .level {
-            display: flex;
-            gap: 14px;
-            justify-content: center;
-            flex-wrap: wrap;
+        .tree-node-content {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px 18px 12px;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(15,23,42,0.06);
+            transition: all 0.25s;
             position: relative;
+            cursor: pointer;
         }
-        .mini-tree .level + .level { margin-top: 26px; }
-        .mini-tree .level::before {
-            content: '';
-            position: absolute;
-            top: -18px;
-            left: 50%;
-            width: 2px;
-            height: 18px;
-            background: var(--line-color-strong);
-            transform: translateX(-1px);
+        .tree-node:hover > .tree-node-content {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px -8px rgba(30,41,59,0.18);
+            border-color: var(--brand-1);
+            z-index: 10;
         }
-        .mini-tree .level:first-child::before { display: none; }
-        .mini-tree .node {
-            padding: 7px 14px;
-            border-radius: 10px;
-            font-size: 12px;
+        .tree-node-content.current {
+            border-color: var(--brand-1);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.25), 0 12px 24px -8px rgba(30,41,59,0.18);
+        }
+        .tree-node-content.root.current {
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.55), 0 10px 20px -6px rgba(79,70,229,0.45);
+        }
+        .node-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin: 0 auto 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #64748b, #475569);
+            letter-spacing: 0.5px;
+        }
+        .tree-node-content .node-name {
             font-weight: 600;
-            background: white;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 5px rgba(15,23,42,0.05);
+            font-size: 13.5px;
             color: var(--ink);
+            line-height: 1.2;
         }
-        .mini-tree .node.root {
+        .node-badges {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .badge {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            letter-spacing: 0.3px;
+        }
+        .badge-pos { background: #eef2ff; color: #4f46e5; }
+        .badge-you { background: #0f172a; color: #fff; }
+
+        .tree-node-content.root {
+            border: none;
             background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
             color: white;
-            border-color: transparent;
-            box-shadow: 0 8px 16px -6px rgba(79,70,229,0.4);
+            min-width: 150px;
+            box-shadow: 0 10px 20px -6px rgba(79,70,229,0.45);
         }
-        .mini-tree .node.current {
-            background: #eef2ff;
-            border-color: var(--brand-1);
-            color: #4338ca;
-            box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+        .tree-node-content.root .node-avatar {
+            background: rgba(255,255,255,0.22);
+            border: 1.5px solid rgba(255,255,255,0.5);
         }
-        .mini-tree .node.free {
-            background: #f1f5f9;
-            border-style: dashed;
-            color: #94a3b8;
-            font-weight: 500;
+        .tree-node-content.root .node-name { color: #ffffff; font-size: 14.5px; }
+
+        .tree-children {
+            display: flex;
+            justify-content: center;
+            gap: 36px;
+            margin-top: 30px;
+            padding-top: 30px;
+            position: relative;
         }
-        .mini-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .tree-children::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2.5px;
+            height: 16px;
+            background: var(--line-color-strong);
+            transform: translateX(-1.25px);
+        }
+        .tree-child {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding-top: 14px;
+        }
+        .tree-child::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            width: 2.5px;
+            height: 14px;
+            background: var(--line-color);
+            transform: translateX(-1.25px);
+        }
+        .tree-child::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            height: 2.5px;
+            background: var(--line-color);
+        }
+        .tree-child:first-child::after { left: 50%; width: 50%; }
+        .tree-child:last-child::after  { right: 50%; width: 50%; }
+        .tree-child:only-child::after  { left: 50%; width: 0; }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: white;
+            padding: 4px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .zoom-btn:hover { background: #f1f5f9; color: #1e293b; }
+        .zoom-btn:active { transform: scale(0.92); }
+        .zoom-btn.primary { background: var(--brand-1); color: white; }
+        .zoom-btn.primary:hover { background: #4338ca; }
+        .zoom-level {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            min-width: 40px;
+            text-align: center;
+            user-select: none;
+        }
+
+        @media (max-width: 768px) {
+            .tree-children { gap: 18px; }
+            .tree-node-content { min-width: 92px; padding: 10px 12px; }
+            .node-avatar { width: 30px; height: 30px; font-size: 11px; }
+            .tree-node-content .node-name { font-size: 11.5px; }
+            .zoom-btn { width: 28px; height: 28px; font-size: 12px; }
+            .zoom-level { font-size: 10px; min-width: 32px; }
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -156,12 +290,12 @@
                     <i class="fas fa-sitemap text-white text-xl"></i>
                 </div>
                 <h1 class="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Ma Généalogie</h1>
-                <p class="text-slate-500 text-sm mt-1">Entrez votre code ou email pour voir votre arbre</p>
+                <p class="text-slate-500 text-sm mt-1">Entrez votre email pour voir votre arbre</p>
             </div>
 
             <form id="searchForm" class="flex flex-col md:flex-row gap-3 max-w-2xl mx-auto">
                 <input type="text" id="searchInput"
-                       placeholder="Code (MB000001) ou Email"
+                       placeholder="Votre adresse email"
                        class="flex-1 px-4 py-3 border border-slate-200 rounded-xl search-input focus:outline-none transition">
                 <button type="submit"
                         class="px-6 py-3 gradient-bg text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg shadow-indigo-200 flex items-center justify-center">
@@ -171,7 +305,7 @@
 
             <div id="searchHint" class="text-center text-sm text-slate-400 mt-3">
                 <i class="fas fa-info-circle mr-1"></i>
-                Exemple: MB000001 ou jean@email.com
+                Exemple: jean@email.com
             </div>
         </div>
 
@@ -183,7 +317,7 @@
                     <div class="w-14 h-14 rounded-full gradient-bg flex items-center justify-center text-white text-xl font-bold" id="memberInitial">J</div>
                     <div>
                         <h2 class="text-xl font-bold text-slate-800" id="memberName">Jean Dupont</h2>
-                        <p class="text-sm text-slate-400 font-mono" id="memberCode">MB000001</p>
+                        <span class="badge badge-pos" id="memberGen">Génération 1</span>
                     </div>
                     <span class="ml-auto status-badge" id="memberStatus">Actif</span>
                 </div>
@@ -235,13 +369,34 @@
                 </div>
             </div>
 
-            <!-- Mini arbre -->
+            <!-- Arbre complet -->
             <div id="miniTree" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6 fade-in">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">
-                    <i class="fas fa-tree text-indigo-600 mr-2"></i> Vue d'ensemble
-                </h3>
-                <div id="miniTreeContent" class="mini-tree">
-                    <p class="text-slate-400 text-sm">Chargement...</p>
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h3 class="text-lg font-bold text-slate-800">
+                        <i class="fas fa-tree text-indigo-600 mr-2"></i> Vue d'ensemble
+                    </h3>
+                    <div class="zoom-controls">
+                        <button id="zoomOutBtn" class="zoom-btn" title="Dézoomer">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                        <button id="zoomInBtn" class="zoom-btn" title="Zoomer">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button id="resetZoomBtn" class="zoom-btn primary" title="Réinitialiser">
+                            <i class="fas fa-compress"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="tree-container" id="treeContainer">
+                    <div class="tree-wrapper" id="treeWrapper">
+                        <div id="miniTreeContent" class="flex flex-col items-center">
+                            <p class="text-slate-400 text-sm">Chargement...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-slate-400 text-center">
+                    <i class="fas fa-mouse-pointer mr-1"></i> Cliquez sur un membre pour voir son profil
                 </div>
             </div>
         </div>
@@ -250,7 +405,7 @@
         <div id="noResult" class="hidden text-center py-16 bg-white rounded-2xl shadow-sm border border-slate-100">
             <i class="fas fa-user-slash text-5xl text-slate-200 mb-4"></i>
             <h3 class="text-xl font-bold text-slate-600">Aucun membre trouvé</h3>
-            <p class="text-slate-400 text-sm mt-2">Vérifiez que le code ou l'email est correct</p>
+            <p class="text-slate-400 text-sm mt-2">Vérifiez que l'email est correct</p>
         </div>
     </main>
 
@@ -272,6 +427,7 @@
 
         let usersMap = {};
         let allMembers = [];
+        let currentMemberId = null;
 
         // ============================================
         // CHARGEMENT DES DONNÉES
@@ -295,12 +451,22 @@
         }
 
         // ============================================
+        // HELPERS
+        // ============================================
+
+        function getInitials(prenom, nom) {
+            const a = (prenom || '?').trim().charAt(0).toUpperCase();
+            const b = (nom || '?').trim().charAt(0).toUpperCase();
+            return `${a}${b}`;
+        }
+
+        // ============================================
         // RECHERCHE
         // ============================================
 
         function searchMember(searchTerm) {
             if (!searchTerm || searchTerm.length < 2) {
-                showToast('Veuillez entrer un code ou un email valide', 'error');
+                showToast('Veuillez entrer un email valide', 'error');
                 return;
             }
 
@@ -325,12 +491,14 @@
             document.getElementById('noResult').classList.add('hidden');
             document.getElementById('results').classList.remove('hidden');
 
+            currentMemberId = found.id;
             const level = getMemberLevel(found.id);
 
             displayProfile(found, level);
             displayAscendance(found);
             displayDescendance(found);
-            displayMiniTree(found.id);
+            displayFullTree();
+            resetZoom();
         }
 
         // ============================================
@@ -358,7 +526,7 @@
         function displayProfile(member, level) {
             document.getElementById('memberInitial').textContent = (member.prenom?.[0] || 'U').toUpperCase();
             document.getElementById('memberName').textContent = `${member.prenom || ''} ${member.nom || ''}`.trim() || 'Inconnu';
-            document.getElementById('memberCode').textContent = member.codeMembre || '---';
+            document.getElementById('memberGen').textContent = `Génération ${level + 1}`;
             document.getElementById('memberEmail').textContent = member.email || '---';
             document.getElementById('memberPhone').textContent = member.telephone || 'Non renseigné';
 
@@ -368,7 +536,7 @@
 
             if (member.parrainId && usersMap[member.parrainId]) {
                 const parrain = usersMap[member.parrainId];
-                document.getElementById('memberParrain').textContent = `${parrain.prenom || ''} ${parrain.nom || ''} (${parrain.codeMembre})`;
+                document.getElementById('memberParrain').textContent = `${parrain.prenom || ''} ${parrain.nom || ''}`;
             } else {
                 document.getElementById('memberParrain').textContent = 'Aucun (Racine)';
             }
@@ -459,12 +627,12 @@
                                         <span class="font-semibold ${isCurrent ? 'text-indigo-700' : 'text-slate-700'}">
                                             ${isRoot ? 'Racine' : `${a.prenom || ''} ${a.nom || ''}`}
                                         </span>
-                                        <span class="text-xs text-slate-400 font-mono ml-2">${a.codeMembre}</span>
+                                        <span class="text-xs text-slate-400 ml-2">${a.email || ''}</span>
                                         ${positionLabel ? `<span class="ml-2" style="background:#eef2ff;color:#4f46e5;font-size:9px;font-weight:700;padding:2px 7px;border-radius:999px;">${positionLabel}</span>` : ''}
                                         ${isCurrent ? '<span class="text-xs text-indigo-600 font-semibold ml-2">(Vous)</span>' : ''}
                                     </div>
                                 </div>
-                                ${!isCurrent && !isRoot ? `<a href="javascript:void(0)" onclick="searchAndDisplay('${a.codeMembre}')" class="text-indigo-400 hover:text-indigo-600 transition shrink-0">
+                                ${!isCurrent && !isRoot ? `<a href="javascript:void(0)" onclick="searchAndDisplay('${a.email}')" class="text-indigo-400 hover:text-indigo-600 transition shrink-0">
                                     <i class="fas fa-eye"></i>
                                 </a>` : ''}
                             </div>
@@ -509,9 +677,8 @@
                                 ${(enfant.prenom?.[0] || '?').toUpperCase()}
                             </span>
                             <span class="font-semibold text-slate-700 truncate">${enfant.prenom || ''} ${enfant.nom || ''}</span>
-                            <span class="text-xs text-slate-400 font-mono">${enfant.codeMembre}</span>
                             <span class="text-xs text-slate-400">Niv.${level}</span>
-                            <a href="javascript:void(0)" onclick="searchAndDisplay('${enfant.codeMembre}')"
+                            <a href="javascript:void(0)" onclick="searchAndDisplay('${enfant.email}')"
                                class="ml-auto text-indigo-400 hover:text-indigo-600 transition shrink-0">
                                 <i class="fas fa-eye"></i>
                             </a>
@@ -522,9 +689,8 @@
                                     <div class="flex items-center gap-2 text-sm">
                                         <i class="fas fa-child text-indigo-300 text-xs"></i>
                                         <span class="text-slate-600">${pe.prenom || ''} ${pe.nom || ''}</span>
-                                        <span class="text-xs text-slate-400 font-mono">${pe.codeMembre}</span>
-                                        <a href="javascript:void(0)" onclick="searchAndDisplay('${pe.codeMembre}')"
-                                           class="text-indigo-400 hover:text-indigo-600 text-xs transition">
+                                        <a href="javascript:void(0)" onclick="searchAndDisplay('${pe.email}')"
+                                           class="text-indigo-400 hover:text-indigo-600 text-xs transition ml-auto">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </div>
@@ -542,10 +708,49 @@
         }
 
         // ============================================
-        // MINI ARBRE
+        // ARBRE COMPLET (même composant que les autres pages)
         // ============================================
 
-        function displayMiniTree(memberId) {
+        function buildFullTreeHTML(nodeId, isRoot, generation) {
+            const node = usersMap[nodeId];
+            if (!node) return null;
+
+            let nodeClass = 'tree-node-content';
+            if (isRoot) nodeClass += ' root';
+            if (nodeId === currentMemberId) nodeClass += ' current';
+
+            const positionLabel = node.position === 'left' ? 'Gauche' : node.position === 'right' ? 'Droite' : '';
+            const initials = getInitials(node.prenom, node.nom);
+            const isYou = nodeId === currentMemberId;
+
+            let badges = '';
+            if (isYou) badges += `<span class="badge badge-you">Vous</span>`;
+            else if (positionLabel) badges += `<span class="badge badge-pos">${positionLabel}</span>`;
+
+            let html = `
+                <div class="tree-node">
+                    <div class="${nodeClass}" onclick="searchAndDisplay('${node.email || ''}')">
+                        <div class="node-avatar">${initials}</div>
+                        <div class="node-name">${node.prenom || '?'} ${node.nom || '?'}</div>
+                        ${badges ? `<div class="node-badges">${badges}</div>` : ''}
+                    </div>
+            `;
+
+            const hasLeft = node.leftChildId && usersMap[node.leftChildId];
+            const hasRight = node.rightChildId && usersMap[node.rightChildId];
+
+            if (hasLeft || hasRight) {
+                html += `<div class="tree-children">`;
+                html += hasLeft ? `<div class="tree-child">${buildFullTreeHTML(node.leftChildId, false, generation + 1)}</div>` : '';
+                html += hasRight ? `<div class="tree-child">${buildFullTreeHTML(node.rightChildId, false, generation + 1)}</div>` : '';
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        function displayFullTree() {
             const container = document.getElementById('miniTreeContent');
 
             let rootId = null;
@@ -554,64 +759,68 @@
             }
 
             if (!rootId) {
-                container.innerHTML = '<p class="text-slate-400 text-sm">Aucun arbre disponible</p>';
+                container.innerHTML = '<p class="text-slate-400 text-sm py-6">Aucun arbre disponible</p>';
                 return;
             }
 
-            let html = '';
-
-            const root = usersMap[rootId];
-            const isRoot = rootId === memberId;
-
-            html += `<div class="level">`;
-            html += `<span class="node root ${isRoot ? 'current' : ''}">${isRoot ? '<i class="fas fa-star mr-1 text-[10px]"></i>' : ''}${root.prenom || ''} ${root.nom || ''}</span>`;
-            html += `</div>`;
-
-            const level1 = allMembers.filter(m => m.parentId === rootId);
-            if (level1.length > 0) {
-                html += `<div class="level">`;
-                level1.forEach(m => {
-                    const isCurrent = m.id === memberId;
-                    const hasChildren = allMembers.some(child => child.parentId === m.id);
-                    html += `<span class="node member ${isCurrent ? 'current' : ''}">
-                        ${isCurrent ? '<i class="fas fa-star mr-1 text-[10px]"></i>' : ''}${m.prenom || ''} ${m.nom || ''}
-                        ${hasChildren ? ' <i class="fas fa-chevron-down text-[9px] opacity-50"></i>' : ''}
-                    </span>`;
-                });
-                html += `</div>`;
-
-                const level2 = allMembers.filter(m => level1.some(parent => parent.id === m.parentId));
-                if (level2.length > 0) {
-                    html += `<div class="level">`;
-                    level2.forEach(m => {
-                        const isCurrent = m.id === memberId;
-                        html += `<span class="node member ${isCurrent ? 'current' : ''}">
-                            ${isCurrent ? '<i class="fas fa-star mr-1 text-[10px]"></i>' : ''}${m.prenom || ''} ${m.nom || ''}
-                        </span>`;
-                    });
-                    html += `</div>`;
-                }
-            }
-
-            html += `
-                <div class="mt-6 pt-4 border-t border-slate-200 flex flex-wrap gap-4 text-xs text-slate-500">
-                    <span><span class="mini-legend-dot gradient-bg mr-1"></span> Racine</span>
-                    <span><span class="mini-legend-dot mr-1" style="background:#4f46e5;"></span> Vous</span>
-                    <span><span class="mini-legend-dot mr-1" style="background:#cbd5e1;"></span> Membre</span>
-                    <span><i class="fas fa-chevron-down text-slate-400 mr-1"></i> A des enfants</span>
-                </div>
-            `;
-
-            container.innerHTML = html;
+            container.innerHTML = buildFullTreeHTML(rootId, true, 1);
+            adjustTreeAlignment();
         }
+
+        // ============================================
+        // ZOOM (identique aux autres pages)
+        // ============================================
+
+        let zoomScale = 1;
+        const MIN_ZOOM = 0.3;
+        const MAX_ZOOM = 2;
+
+        function updateZoom() {
+            document.getElementById('treeWrapper').style.transform = `scale(${zoomScale})`;
+            document.getElementById('zoomLevel').textContent = Math.round(zoomScale * 100) + '%';
+            adjustTreeAlignment();
+        }
+
+        document.getElementById('zoomInBtn').addEventListener('click', function() {
+            zoomScale = Math.min(zoomScale + 0.1, MAX_ZOOM);
+            updateZoom();
+        });
+        document.getElementById('zoomOutBtn').addEventListener('click', function() {
+            zoomScale = Math.max(zoomScale - 0.1, MIN_ZOOM);
+            updateZoom();
+        });
+        document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
+
+        function resetZoom() {
+            zoomScale = 1;
+            updateZoom();
+        }
+
+        // Filet de sécurité : garde tout l'arbre accessible au scroll,
+        // même en cas de débordement (voir correctif appliqué sur les
+        // autres pages — évite qu'un centrage flexbox rende la partie
+        // gauche de l'arbre inaccessible).
+        function adjustTreeAlignment() {
+            const wrapper = document.getElementById('treeWrapper');
+            const container = document.getElementById('treeContainer');
+            if (!wrapper || !container) return;
+            requestAnimationFrame(() => {
+                const overflowing = wrapper.scrollWidth > container.clientWidth + 1;
+                wrapper.style.justifyContent = overflowing ? 'flex-start' : 'center';
+            });
+        }
+
+        window.addEventListener('resize', adjustTreeAlignment);
 
         // ============================================
         // RECHERCHE RAPIDE
         // ============================================
 
         window.searchAndDisplay = function(term) {
+            if (!term) return;
             document.getElementById('searchInput').value = term;
             searchMember(term);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         // ============================================
@@ -622,7 +831,7 @@
             e.preventDefault();
             const searchTerm = document.getElementById('searchInput').value.trim();
             if (!searchTerm) {
-                showToast('Veuillez entrer un code ou un email', 'error');
+                showToast('Veuillez entrer un email', 'error');
                 return;
             }
             await loadAllUsers();
