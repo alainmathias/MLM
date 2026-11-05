@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Parrainages - Firebase</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Police Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SDK Firebase (Version Modulaire via CDN) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, setDoc, updateDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+        // ==========================================
+        // VOTRE CONFIGURATION FIREBASE
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
+            authDomain: "mlm1-598b5.firebaseapp.com",
+            projectId: "mlm1-598b5",
+            storageBucket: "mlm1-598b5.firebasestorage.app",
+            messagingSenderId: "601982652419",
+            appId: "1:601982652419:web:7db86f3d742c9d7063be36",
+            measurementId: "G-304SZ35W32"
+        };
+        // ==========================================
+
+        // Initialisation de Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        // const analytics = getAnalytics(app); // Décommenter si vous voulez les stats
+
+        // Exposition globale pour le script principal
+        window.db = db;
+        window.collection = collection;
+        window.getDocs = getDocs;
+        window.setDoc = setDoc;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        window.getDoc = getDoc;
+
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' } },
+                    boxShadow: { 'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)' }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .grid-lines { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+        .grid-lines::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 2px; background-color: #e2e8f0; }
+        .grid-lines::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background-color: #e2e8f0; }
+        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .animate-modal { animation: fadeInScale 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .case-hover:hover { background-color: #f8fafc; border-color: #cbd5e1; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800 antialiased selection:bg-brand-100 selection:text-brand-700">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-brand-600 flex items-center justify-center shadow-md shadow-brand-500/20">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 leading-tight">Gestion des Parrainages</h1>
+                    <p class="text-xs text-slate-500 font-medium">Espace Administrateur</p>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center gap-2 text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+                <span id="status-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <span id="status-text">Connexion...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div class="mb-8 flex items-center gap-2 text-sm text-slate-600 bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
+            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <p>Cliquez sur une case pour ajouter ou modifier un membre. L'ID est défini manuellement.</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-8 lg:gap-12" id="conteneur-groupes">
+            <div class="text-slate-400 font-medium animate-pulse flex items-center gap-2">
+                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Chargement des données...
+            </div>
+        </div>
+    </main>
+
+    <!-- Modale -->
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4" id="modal">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-slate-100">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h2 id="modal-titre" class="text-lg font-semibold text-slate-800">Ajouter une personne</h2>
+                <button onclick="fermerModal()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">ID (Identifiant unique) <span class="text-red-500">*</span></label>
+                    <input type="text" id="input-id" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono" placeholder="Ex: ADH-2024-001">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Prénom</label>
+                        <input type="text" id="input-prenom" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="Ex: Jean">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Nom</label>
+                        <input type="text" id="input-nom" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all uppercase" placeholder="Ex: DUPONT">
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-3 rounded-b-2xl">
+                <div class="flex justify-end gap-3">
+                    <button onclick="fermerModal()" class="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">Annuler</button>
+                    <button onclick="validerSaisie()" id="btn-enregistrer" class="px-5 py-2.5 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-all shadow-md shadow-brand-500/20 active:scale-95 disabled:opacity-50">Enregistrer</button>
+                </div>
+                <button id="btn-supprimer" onclick="supprimerPersonne()" class="w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors hidden">Supprimer ce membre</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let membresData = [];
+        let cibleActuelle = { groupe: null, type: null, indexFilleul: null, docId: null };
+        let firebasePret = false;
+
+        window.addEventListener('firebase-ready', () => {
+            firebasePret = true;
+            initialiser();
+        });
+
+        async function initialiser() {
+            await chargerDonnees();
+        }
+
+        async function chargerDonnees() {
+            try {
+                const querySnapshot = await window.getDocs(window.collection(window.db, "membres"));
+                membresData = [];
+                querySnapshot.forEach((doc) => {
+                    membresData.push({ id: doc.id, ...doc.data() });
+                });
+
+                document.getElementById('status-text').textContent = "Connecté";
+                document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
+                
+                afficherGroupes();
+            } catch (error) {
+                console.error("Erreur de chargement:", error);
+                document.getElementById('status-text').textContent = "Erreur DB";
+                document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-red-500";
+                document.getElementById('conteneur-groupes').innerHTML = `<p class="text-red-500 bg-red-50 p-4 rounded-lg border border-red-200">Erreur de connexion à Firebase. Vérifiez que Firestore est activé et que les règles autorisent la lecture.</p>`;
+            }
+        }
+
+        function afficherGroupes() {
+            const conteneur = document.getElementById('conteneur-groupes');
+            conteneur.innerHTML = '';
+
+            for (let i = 0; i < 4; i++) {
+                const parrain = membresData.find(m => m.groupe_id === i && m.role === 'parrain');
+                
+                const groupeWrapper = document.createElement('div');
+                groupeWrapper.className = 'flex flex-col items-center group';
+                groupeWrapper.innerHTML = `
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-6 h-6 rounded-md bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold">${i+1}</span>
+                        <h3 class="font-semibold text-slate-700 text-sm tracking-wide uppercase">Groupe ${i + 1}</h3>
+                    </div>
+                    <div class="w-64 h-64 border-2 border-slate-200 relative bg-white shadow-soft rounded-xl overflow-hidden transition-all duration-300 group-hover:border-slate-300 group-hover:shadow-md">
+                        <div class="grid-lines"></div>
+                        
+                        <div class="absolute w-32 h-16 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center justify-center text-xs cursor-pointer text-slate-400 bg-white border-2 border-dashed border-slate-300 rounded-lg case-hover transition-all" 
+                             id="case-parrain-${i}" onclick="ouvrirModal(${i}, 'parrain', null)">
+                             ${parrain ? renderPersonne(parrain, 'parrain') : `<svg class="w-5 h-5 mb-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span class="font-semibold pointer-events-none">Ajouter Parrain</span>`}
+                        </div>
+                        
+                        ${[0,1,2,3].map(pos => {
+                            const filleul = membresData.find(m => m.groupe_id === i && m.role === 'filleul' && m.position_filleul === pos);
+                            const posClass = [ 'top-0 left-0', 'top-0 right-0', 'bottom-0 left-0', 'bottom-0 right-0' ][pos];
+                            return `
+                                <div class="absolute w-1/2 h-1/2 ${posClass} z-10 flex flex-col items-center justify-center text-xs cursor-pointer text-slate-400 case-hover transition-all" 
+                                     id="case-filleul-${i}-${pos}" onclick="ouvrirModal(${i}, 'filleul', ${pos})">
+                                     ${filleul ? renderPersonne(filleul, 'filleul') : `<span class="font-semibold pointer-events-none">+ Filleul</span>`}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                conteneur.appendChild(groupeWrapper);
+            }
+        }
+
+        function renderPersonne(personne, type) {
+            const idBadge = `<span class="text-[9px] font-mono text-slate-500 mt-0.5 bg-slate-100 px-1 py-0.5 rounded">ID: ${personne.id}</span>`;
+            
+            if (type === 'parrain') {
+                return `<div class="flex flex-col items-center justify-center w-full h-full p-1 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg text-amber-900 shadow-sm">
+                            <span class="font-bold text-[13px] leading-tight text-center truncate w-full px-1">${personne.prenom} ${personne.nom}</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-amber-600/80 mt-0.5">Parrain</span>
+                            ${idBadge}
+                        </div>`;
+            } else {
+                return `<div class="flex flex-col items-center justify-center w-full h-full p-2 bg-emerald-50/50 text-emerald-900">
+                            <span class="font-semibold text-[12px] leading-tight text-center truncate w-full px-1">${personne.prenom} ${personne.nom}</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600/80 mt-1">Filleul</span>
+                            ${idBadge}
+                        </div>`;
+            }
+        }
+
+        function ouvrirModal(indexGroupe, type, indexFilleul) {
+            if (!firebasePret) return;
+            cibleActuelle = { groupe: indexGroupe, type: type, indexFilleul: indexFilleul, docId: null };
+            
+            const modal = document.getElementById('modal');
+            const titre = document.getElementById('modal-titre');
+            const btnSuppr = document.getElementById('btn-supprimer');
+            const btnEnregistrer = document.getElementById('btn-enregistrer');
+            const inputId = document.getElementById('input-id');
+            
+            let personne = membresData.find(m => m.groupe_id === indexGroupe && m.role === type && (type === 'parrain' || m.position_filleul === indexFilleul));
+            
+            if (personne) {
+                cibleActuelle.docId = personne.id;
+                document.getElementById('input-prenom').value = personne.prenom;
+                document.getElementById('input-nom').value = personne.nom;
+                inputId.value = personne.id;
+                
+                inputId.disabled = true;
+                inputId.classList.add('bg-slate-100', 'cursor-not-allowed');
+                
+                btnSuppr.classList.remove('hidden');
+                btnEnregistrer.textContent = "Mettre à jour";
+                titre.innerHTML = type === 'parrain' ? `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Modifier le Parrain</span>` : `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Modifier le Filleul</span>`;
+            } else {
+                document.getElementById('input-prenom').value = '';
+                document.getElementById('input-nom').value = '';
+                inputId.value = ''; 
+                
+                inputId.disabled = false;
+                inputId.classList.remove('bg-slate-100', 'cursor-not-allowed');
+                
+                btnSuppr.classList.add('hidden');
+                btnEnregistrer.textContent = "Enregistrer";
+                titre.innerHTML = type === 'parrain' ? `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Saisir le Parrain</span>` : `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Saisir le Filleul</span>`;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => document.getElementById('input-id').focus(), 100);
+        }
+
+        function fermerModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+            cibleActuelle = { groupe: null, type: null, indexFilleul: null, docId: null };
+        }
+
+        async function validerSaisie() {
+            const idSaisi = document.getElementById('input-id').value.trim();
+            const prenom = document.getElementById('input-prenom').value.trim();
+            const nom = document.getElementById('input-nom').value.trim().toUpperCase();
+            const btn = document.getElementById('btn-enregistrer');
+
+            if (!idSaisi || !prenom || !nom) { 
+                alert("L'ID, le Prénom et le Nom sont obligatoires."); 
+                return; 
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Vérification...";
+
+            const payload = {
+                groupe_id: cibleActuelle.groupe,
+                role: cibleActuelle.type,
+                position_filleul: cibleActuelle.type === 'filleul' ? cibleActuelle.indexFilleul : null,
+                prenom: prenom,
+                nom: nom
+            };
+
+            try {
+                if (cibleActuelle.docId) {
+                    await window.updateDoc(window.doc(window.db, "membres", cibleActuelle.docId), payload);
+                } else {
+                    const docRef = window.doc(window.db, "membres", idSaisi);
+                    const docSnap = await window.getDoc(docRef);
+                    
+                    if (docSnap.exists()) {
+                        alert("Erreur : Cet ID existe déjà. Veuillez en choisir un autre.");
+                        btn.disabled = false;
+                        btn.textContent = "Enregistrer";
+                        return;
+                    }
+                    
+                    await window.setDoc(docRef, payload);
+                }
+                await chargerDonnees();
+                fermerModal();
+            } catch (error) {
+                alert("Erreur de sauvegarde : " + error.message);
+                console.error(error);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = cibleActuelle.docId ? "Mettre à jour" : "Enregistrer";
+                }
+            }
+        }
+
+        async function supprimerPersonne() {
+            if (!confirm("Voulez-vous vraiment supprimer ce membre ?")) return;
+            if (!cibleActuelle.docId) return;
+
+            try {
+                await window.deleteDoc(window.doc(window.db, "membres", cibleActuelle.docId));
+                await chargerDonnees();
+                fermerModal();
+            } catch (error) {
+                alert("Erreur de suppression : " + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
