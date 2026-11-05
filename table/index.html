@@ -115,10 +115,10 @@
 
 <body class="bg-slate-950 font-sans text-slate-100 min-h-screen antialiased selection:bg-indigo-500/30">
 
-<!-- Conteneur Principal (100% de la largeur de l'écran) -->
+<!-- Conteneur Principal -->
 <div class="w-full min-h-screen flex flex-col relative pb-16">
 
-    <!-- En-tête (Responsive) -->
+    <!-- En-tête -->
     <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 md:px-8 pt-3 pb-3 w-full">
         <div class="max-w-7xl mx-auto flex flex-col gap-4">
             <!-- Ligne 1 : Logo & Statut -->
@@ -152,31 +152,28 @@
                 <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
                     <div class="bg-slate-800/60 rounded-xl p-2.5 border border-slate-800 flex flex-col min-w-[100px]">
                         <span class="text-[10px] text-slate-400 font-medium">Tables</span>
-                        <span class="text-sm font-bold text-slate-200 mt-0.5" id="stat-tables">4 Actives</span>
+                        <span class="text-sm font-bold text-slate-200 mt-0.5" id="stat-tables">5 Actives</span>
                     </div>
                     <div class="bg-amber-500/10 rounded-xl p-2.5 border border-amber-500/20 flex flex-col min-w-[100px]">
                         <span class="text-[10px] text-amber-300/80 font-medium">Parrains</span>
-                        <span class="text-sm font-bold text-amber-400 mt-0.5" id="stat-parrains">-- / 4</span>
+                        <span class="text-sm font-bold text-amber-400 mt-0.5" id="stat-parrains">-- / 5</span>
                     </div>
                     <div class="bg-emerald-500/10 rounded-xl p-2.5 border border-emerald-500/20 flex flex-col min-w-[100px]">
                         <span class="text-[10px] text-emerald-300/80 font-medium">Filleuls</span>
-                        <span class="text-sm font-bold text-emerald-400 mt-0.5" id="stat-filleuls">-- / 16</span>
+                        <span class="text-sm font-bold text-emerald-400 mt-0.5" id="stat-filleuls">-- / 20</span>
                     </div>
                 </div>
 
-                <!-- Filtres -->
-                <div class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar w-full md:w-auto pb-1 md:pb-0">
+                <!-- Filtres Dynamiques -->
+                <div class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar w-full md:w-auto pb-1 md:pb-0" id="conteneur-filtres">
                     <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-indigo-600 text-white shadow-sm shadow-indigo-600/30" id="tab-all" onclick="changerFiltre('all')">Toutes</button>
-                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-0" onclick="changerFiltre(0)">Table 1</button>
-                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-1" onclick="changerFiltre(1)">Table 2</button>
-                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-2" onclick="changerFiltre(2)">Table 3</button>
-                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-3" onclick="changerFiltre(3)">Table 4</button>
+                    <!-- Les boutons des tables seront ajoutés ici par JavaScript -->
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Contenu Principal (Grille Responsive) -->
+    <!-- Contenu Principal -->
     <main class="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
         
         <!-- Info -->
@@ -189,7 +186,7 @@
             </div>
         </div>
 
-        <!-- Grille des Tables (1 col mobile, 2 col tablette, 3+ col PC) -->
+        <!-- Grille des Tables -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="conteneur-tables">
             <div class="col-span-full flex flex-col items-center justify-center py-20 text-center text-slate-400 space-y-4">
                 <div class="relative w-12 h-12">
@@ -211,7 +208,7 @@
     </footer>
 </div>
 
-<!-- Modale (Bottom Sheet sur mobile, Centrée sur ordinateur) -->
+<!-- Modale -->
 <div class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-end sm:items-center justify-center z-50 animate-backdrop" id="modal" onclick="gererClicOverlay(event)">
     <div class="bg-slate-900 border-t sm:border border-slate-700/80 rounded-t-[28px] sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-sheet animate-sheet text-slate-100 flex flex-col" onclick="event.stopPropagation()">
         <div class="pt-3 pb-1 flex justify-center sm:hidden"><div class="w-12 h-1.5 rounded-full bg-slate-700"></div></div>
@@ -302,13 +299,15 @@
         }
     }
 
-    // LOGIQUE CORRIGÉE DES STATISTIQUES
+    // LOGIQUE DES STATISTIQUES
     function mettreAJourStats() {
         let maxTableId = -1;
         membresData.forEach(m => { 
             if (m.groupe_id > maxTableId) maxTableId = m.groupe_id; 
         });
-        const nombreDeTables = Math.max(4, maxTableId + 2);
+        
+        // On affiche toujours 3 tables d'avance minimum
+        const nombreDeTables = Math.max(5, maxTableId + 3); 
 
         const nbParrains = membresData.filter(m => m.role === 'parrain').length;
         const nbFilleuls = membresData.filter(m => m.role === 'filleul').length;
@@ -325,42 +324,70 @@
         if (elF) elF.textContent = `${nbFilleuls} / ${capaciteFilleuls}`;
     }
 
+    // GESTION DES FILTRES DYNAMIQUES
     function changerFiltre(nouveauFiltre) {
         filtreActuel = nouveauFiltre;
-        const tabs = ['tab-all', 'tab-0', 'tab-1', 'tab-2', 'tab-3'];
-        tabs.forEach(t => {
-            const el = document.getElementById(t);
-            if (!el) return;
-            const matches = (t === 'tab-all' && nouveauFiltre === 'all') || (t === `tab-${nouveauFiltre}`);
+        
+        const conteneurFiltres = document.getElementById('conteneur-filtres');
+        const buttons = conteneurFiltres.querySelectorAll('button');
+        
+        buttons.forEach(btn => {
+            const isAll = btn.id === 'tab-all';
+            const tableId = parseInt(btn.id.replace('tab-', ''), 10);
+            
+            const matches = (isAll && nouveauFiltre === 'all') || (!isAll && tableId === parseInt(nouveauFiltre, 10));
+            
             if (matches) {
-                el.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-indigo-600 text-white shadow-sm shadow-indigo-600/30";
+                btn.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-indigo-600 text-white shadow-sm shadow-indigo-600/30";
             } else {
-                el.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all";
+                btn.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all";
             }
         });
+        
         afficherTables();
     }
 
+    function genererBoutonsFiltres(nombreDeTables) {
+        const conteneurFiltres = document.getElementById('conteneur-filtres');
+        
+        // On supprime tous les boutons sauf le bouton "Toutes"
+        const buttons = conteneurFiltres.querySelectorAll('button:not(#tab-all)');
+        buttons.forEach(btn => btn.remove());
+        
+        // On ajoute un bouton pour chaque table
+        for (let i = 0; i < nombreDeTables; i++) {
+            const btn = document.createElement('button');
+            btn.id = `tab-${i}`;
+            btn.onclick = () => changerFiltre(i);
+            btn.textContent = `Table ${i + 1}`;
+            
+            btn.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all";
+            
+            if (filtreActuel === i || filtreActuel === String(i)) {
+                btn.className = "tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-indigo-600 text-white shadow-sm shadow-indigo-600/30";
+            }
+            
+            conteneurFiltres.appendChild(btn);
+        }
+    }
+
     // AFFICHAGE DYNAMIQUE
-    // ==========================================
-    // AFFICHAGE DES TABLES (DYNAMIQUE & AUTO-EXTENSION)
-    // ==========================================
     function afficherTables() {
         const conteneur = document.getElementById('conteneur-tables');
         if (!conteneur) return;
         conteneur.innerHTML = '';
 
-        // 1. On cherche la table la plus haute qui existe dans la base de données
         let maxTableId = -1;
         membresData.forEach(m => { 
             if (m.groupe_id > maxTableId) maxTableId = m.groupe_id; 
         });
 
-        // 2. On calcule combien de tables afficher.
-        // On affiche la dernière table + 3 (pour avoir TOUJOURS 3 tables vides d'avance prêtes à l'emploi)
         const nombreDeTablesAAfficher = Math.max(5, maxTableId + 3);
         
-        // On crée un tableau [0, 1, 2, 3, 4...] pour la boucle
+        // 1. Mettre à jour les boutons de filtre
+        genererBoutonsFiltres(nombreDeTablesAAfficher);
+
+        // 2. Filtrer les tables à afficher
         const tablesAAfficher = [];
         for (let i = 0; i < nombreDeTablesAAfficher; i++) {
             if (filtreActuel === 'all' || parseInt(filtreActuel, 10) === i) {
@@ -368,10 +395,11 @@
             }
         }
 
-        // Mise à jour du compteur de tables dans l'en-tête
+        // 3. Mettre à jour le compteur de tables
         const statTables = document.getElementById('stat-tables');
         if (statTables) statTables.textContent = `${nombreDeTablesAAfficher} Actives`;
 
+        // 4. Générer les cartes
         tablesAAfficher.forEach((i) => {
             const parrain = membresData.find(m => m.groupe_id === i && m.role === 'parrain');
             const filleuls = [0, 1, 2, 3].map(pos => 
@@ -418,52 +446,6 @@
         });
     }
 
-        tablesAAfficher.forEach((i) => {
-            const parrain = membresData.find(m => m.groupe_id === i && m.role === 'parrain');
-            const filleuls = [0, 1, 2, 3].map(pos => 
-                membresData.find(m => m.groupe_id === i && m.role === 'filleul' && m.position_filleul === pos)
-            );
-            
-            const tableCard = document.createElement('div');
-            tableCard.className = 'flex flex-col items-center bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 shadow-lg transition-all hover:border-slate-700'; 
-
-            tableCard.innerHTML = `
-                <!-- Titre de la Table -->
-                <div class="flex items-center gap-2 mb-4 w-full">
-                    <span class="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold">${i + 1}</span>
-                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wide">Table ${i + 1}</h2>
-                </div>
-
-                <!-- Le Bloc Blanc de la Matrice -->
-                <div class="w-full bg-white border border-slate-200 rounded-xl shadow-sm p-2">
-                    <div class="matrix-container">
-                        <div class="matrix-line-h"></div>
-                        <div class="matrix-line-v"></div>
-
-                        <div class="matrix-cell cell-tl" onclick="ouvrirModal(${i}, 'filleul', 0)">
-                            ${filleuls[0] ? renderFilleul(filleuls[0]) : renderEmptyFilleul(0)}
-                        </div>
-                        <div class="matrix-cell cell-tr" onclick="ouvrirModal(${i}, 'filleul', 1)">
-                            ${filleuls[1] ? renderFilleul(filleuls[1]) : renderEmptyFilleul(1)}
-                        </div>
-                        <div class="matrix-cell cell-bl" onclick="ouvrirModal(${i}, 'filleul', 2)">
-                            ${filleuls[2] ? renderFilleul(filleuls[2]) : renderEmptyFilleul(2)}
-                        </div>
-                        <div class="matrix-cell cell-br" onclick="ouvrirModal(${i}, 'filleul', 3)">
-                            ${filleuls[3] ? renderFilleul(filleuls[3]) : renderEmptyFilleul(3)}
-                        </div>
-
-                        <div class="matrix-center ${parrain ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30'}" 
-                             onclick="ouvrirModal(${i}, 'parrain', null)">
-                            ${parrain ? renderParrain(parrain) : renderEmptyParrain()}
-                        </div>
-                    </div>
-                </div>
-            `;
-            conteneur.appendChild(tableCard);
-        });
-    }
- }
     // --- RENDU DES CARTES ---
     function renderParrain(personne) {
         return `
