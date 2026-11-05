@@ -308,13 +308,32 @@
         }
     }
 
-    function mettreAJourStats() {
+     function mettreAJourStats() {
+        // 1. Calculer le nombre de tables actives (comme dans afficherTables)
+        let maxTableId = -1;
+        membresData.forEach(m => { 
+            if (m.groupe_id > maxTableId) maxTableId = m.groupe_id; 
+        });
+        const nombreDeTables = Math.max(4, maxTableId + 2); // On garde la même logique que l'affichage
+
+        // 2. Compter les membres actuels
         const nbParrains = membresData.filter(m => m.role === 'parrain').length;
         const nbFilleuls = membresData.filter(m => m.role === 'filleul').length;
+
+        // 3. Calculer les capacités maximales basées sur le nombre de tables
+        const capaciteParrains = nombreDeTables;
+        const capaciteFilleuls = nombreDeTables * 4;
+
+        // 4. Mettre à jour l'affichage
+        const elT = document.getElementById('stat-tables');
         const elP = document.getElementById('stat-parrains');
         const elF = document.getElementById('stat-filleuls');
-        if (elP) elP.textContent = `${nbParrains} / 4`;
-        if (elF) elF.textContent = `${nbFilleuls} / 16`;
+
+        if (elT) elT.textContent = `${nombreDeTables} Actives`;
+        
+        // On affiche "Actuel / Capacité Max"
+        if (elP) elP.textContent = `${nbParrains} / ${capaciteParrains}`;
+        if (elF) elF.textContent = `${nbFilleuls} / ${capaciteFilleuls}`;
     }
 
     function changerFiltre(nouveauFiltre) {
