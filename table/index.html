@@ -11,15 +11,11 @@
     <!-- Police Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- SDK Firebase (Version Modulaire via CDN) -->
+    <!-- SDK Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, setDoc, updateDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 
-        // ==========================================
-        // VOTRE CONFIGURATION FIREBASE
-        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyA1fWfIgWgv-UagCcp9blTO8iE8AfixVNM",
             authDomain: "mlm1-598b5.firebaseapp.com",
@@ -29,14 +25,10 @@
             appId: "1:601982652419:web:7db86f3d742c9d7063be36",
             measurementId: "G-304SZ35W32"
         };
-        // ==========================================
 
-        // Initialisation de Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        // const analytics = getAnalytics(app); // Décommenter si vous voulez les stats
 
-        // Exposition globale pour le script principal
         window.db = db;
         window.collection = collection;
         window.getDocs = getDocs;
@@ -93,10 +85,10 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div class="mb-8 flex items-center gap-2 text-sm text-slate-600 bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
             <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <p>Cliquez sur une case pour ajouter ou modifier un membre. L'ID est défini manuellement.</p>
+            <p>Cliquez sur une case pour ajouter ou modifier un membre dans une table. L'ID est défini manuellement.</p>
         </div>
 
-        <div class="flex flex-wrap justify-center gap-8 lg:gap-12" id="conteneur-groupes">
+        <div class="flex flex-wrap justify-center gap-8 lg:gap-12" id="conteneur-tables">
             <div class="text-slate-400 font-medium animate-pulse flex items-center gap-2">
                 <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 Chargement des données...
@@ -141,7 +133,7 @@
 
     <script>
         let membresData = [];
-        let cibleActuelle = { groupe: null, type: null, indexFilleul: null, docId: null };
+        let cibleActuelle = { table: null, type: null, indexFilleul: null, docId: null };
         let firebasePret = false;
 
         window.addEventListener('firebase-ready', () => {
@@ -164,28 +156,29 @@
                 document.getElementById('status-text').textContent = "Connecté";
                 document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
                 
-                afficherGroupes();
+                afficherTables();
             } catch (error) {
                 console.error("Erreur de chargement:", error);
                 document.getElementById('status-text').textContent = "Erreur DB";
                 document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-red-500";
-                document.getElementById('conteneur-groupes').innerHTML = `<p class="text-red-500 bg-red-50 p-4 rounded-lg border border-red-200">Erreur de connexion à Firebase. Vérifiez que Firestore est activé et que les règles autorisent la lecture.</p>`;
+                document.getElementById('conteneur-tables').innerHTML = `<p class="text-red-500 bg-red-50 p-4 rounded-lg border border-red-200">Erreur de connexion à Firebase.</p>`;
             }
         }
 
-        function afficherGroupes() {
-            const conteneur = document.getElementById('conteneur-groupes');
+        function afficherTables() {
+            const conteneur = document.getElementById('conteneur-tables');
             conteneur.innerHTML = '';
 
+            // On boucle pour créer les 4 tables
             for (let i = 0; i < 4; i++) {
                 const parrain = membresData.find(m => m.groupe_id === i && m.role === 'parrain');
                 
-                const groupeWrapper = document.createElement('div');
-                groupeWrapper.className = 'flex flex-col items-center group';
-                groupeWrapper.innerHTML = `
+                const tableWrapper = document.createElement('div');
+                tableWrapper.className = 'flex flex-col items-center group';
+                tableWrapper.innerHTML = `
                     <div class="flex items-center gap-2 mb-3">
                         <span class="w-6 h-6 rounded-md bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold">${i+1}</span>
-                        <h3 class="font-semibold text-slate-700 text-sm tracking-wide uppercase">Groupe ${i + 1}</h3>
+                        <h3 class="font-semibold text-slate-700 text-sm tracking-wide uppercase">Table ${i + 1}</h3>
                     </div>
                     <div class="w-64 h-64 border-2 border-slate-200 relative bg-white shadow-soft rounded-xl overflow-hidden transition-all duration-300 group-hover:border-slate-300 group-hover:shadow-md">
                         <div class="grid-lines"></div>
@@ -207,7 +200,7 @@
                         }).join('')}
                     </div>
                 `;
-                conteneur.appendChild(groupeWrapper);
+                conteneur.appendChild(tableWrapper);
             }
         }
 
@@ -229,9 +222,9 @@
             }
         }
 
-        function ouvrirModal(indexGroupe, type, indexFilleul) {
+        function ouvrirModal(indexTable, type, indexFilleul) {
             if (!firebasePret) return;
-            cibleActuelle = { groupe: indexGroupe, type: type, indexFilleul: indexFilleul, docId: null };
+            cibleActuelle = { table: indexTable, type: type, indexFilleul: indexFilleul, docId: null };
             
             const modal = document.getElementById('modal');
             const titre = document.getElementById('modal-titre');
@@ -239,7 +232,7 @@
             const btnEnregistrer = document.getElementById('btn-enregistrer');
             const inputId = document.getElementById('input-id');
             
-            let personne = membresData.find(m => m.groupe_id === indexGroupe && m.role === type && (type === 'parrain' || m.position_filleul === indexFilleul));
+            let personne = membresData.find(m => m.groupe_id === indexTable && m.role === type && (type === 'parrain' || m.position_filleul === indexFilleul));
             
             if (personne) {
                 cibleActuelle.docId = personne.id;
@@ -252,7 +245,7 @@
                 
                 btnSuppr.classList.remove('hidden');
                 btnEnregistrer.textContent = "Mettre à jour";
-                titre.innerHTML = type === 'parrain' ? `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Modifier le Parrain</span>` : `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Modifier le Filleul</span>`;
+                titre.innerHTML = type === 'parrain' ? `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Modifier le Parrain (Table ${indexTable + 1})</span>` : `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Modifier le Filleul (Table ${indexTable + 1})</span>`;
             } else {
                 document.getElementById('input-prenom').value = '';
                 document.getElementById('input-nom').value = '';
@@ -263,7 +256,7 @@
                 
                 btnSuppr.classList.add('hidden');
                 btnEnregistrer.textContent = "Enregistrer";
-                titre.innerHTML = type === 'parrain' ? `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Saisir le Parrain</span>` : `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Saisir le Filleul</span>`;
+                titre.innerHTML = type === 'parrain' ? `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Saisir le Parrain (Table ${indexTable + 1})</span>` : `<span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Saisir le Filleul (Table ${indexTable + 1})</span>`;
             }
 
             modal.classList.remove('hidden');
@@ -274,7 +267,7 @@
         function fermerModal() {
             document.getElementById('modal').classList.add('hidden');
             document.getElementById('modal').classList.remove('flex');
-            cibleActuelle = { groupe: null, type: null, indexFilleul: null, docId: null };
+            cibleActuelle = { table: null, type: null, indexFilleul: null, docId: null };
         }
 
         async function validerSaisie() {
@@ -291,8 +284,9 @@
             btn.disabled = true;
             btn.textContent = "Vérification...";
 
+            // On garde "groupe_id" dans la base de données pour ne pas casser l'existant
             const payload = {
-                groupe_id: cibleActuelle.groupe,
+                groupe_id: cibleActuelle.table, 
                 role: cibleActuelle.type,
                 position_filleul: cibleActuelle.type === 'filleul' ? cibleActuelle.indexFilleul : null,
                 prenom: prenom,
