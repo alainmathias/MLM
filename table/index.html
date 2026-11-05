@@ -41,7 +41,7 @@
             extend: {
                 fontFamily: { 
                     sans: ['Plus Jakarta Sans', 'sans-serif'],
-                     mono: ['JetBrains Mono', 'monospace']
+                    mono: ['JetBrains Mono', 'monospace']
                 },
                 colors: { 
                     brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#1e1b4b' } 
@@ -61,7 +61,7 @@
     .animate-sheet { animation: slideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     .animate-backdrop { animation: fadeIn 0.2s ease-out forwards; }
 
-    /* --- DESIGN DES TABLES CLAIRES (Style Image) --- */
+    /* --- DESIGN DES TABLES CLAIRES --- */
     .matrix-container {
         position: relative;
         width: 100%;
@@ -71,11 +71,9 @@
         overflow: hidden;
     }
     
-    /* Lignes de la croix */
     .matrix-line-h { position: absolute; top: 50%; left: 0; right: 0; height: 1px; background-color: #e2e8f0; z-index: 1; }
     .matrix-line-v { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background-color: #e2e8f0; z-index: 1; }
 
-    /* Cases Filleuls */
     .matrix-cell {
         position: absolute;
         width: 50%;
@@ -96,7 +94,6 @@
     .cell-bl { bottom: 0; left: 0; }
     .cell-br { bottom: 0; right: 0; }
 
-    /* Case Parrain (Centre) */
     .matrix-center {
         position: absolute;
         top: 50%;
@@ -116,149 +113,146 @@
 </style>
 </head>
 
-<body class="bg-slate-950 font-sans text-slate-100 min-h-screen flex flex-col justify-start items-center antialiased selection:bg-indigo-500/30">
+<body class="bg-slate-950 font-sans text-slate-100 min-h-screen antialiased selection:bg-indigo-500/30">
 
-<!-- Conteneur Mobile -->
-<div class="w-full max-w-[440px] bg-slate-900 min-h-screen shadow-2xl flex flex-col border-x border-slate-800/80 relative pb-16">
+<!-- Conteneur Principal (100% de la largeur de l'écran) -->
+<div class="w-full min-h-screen flex flex-col relative pb-16">
 
-    <!-- En-tête Sombre (Conservé) -->
-    <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 pt-3 pb-3">
-        <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-600/30 ring-1 ring-white/20">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                    </svg>
-                </div>
-                <div>
-                    <div class="flex items-center gap-1.5">
-                        <h1 class="text-sm font-bold text-white tracking-tight">Parrainages MLM</h1>
-                        <span class="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Matrice</span>
+    <!-- En-tête (Responsive) -->
+    <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 md:px-8 pt-3 pb-3 w-full">
+        <div class="max-w-7xl mx-auto flex flex-col gap-4">
+            <!-- Ligne 1 : Logo & Statut -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-600/30 ring-1 ring-white/20">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                        </svg>
                     </div>
-                    <p class="text-[11px] text-slate-400">Arborescence & Filiation 1:4</p>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg font-bold text-white tracking-tight">Parrainages MLM</h1>
+                            <span class="hidden sm:inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Matrice</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Arborescence & Filiation 1:4</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-full text-xs font-medium text-slate-300 shadow-inner">
+                    <span class="relative flex h-2 w-2" id="status-dot">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span id="status-text">Synchronisé</span>
                 </div>
             </div>
-            <div class="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 px-2.5 py-1.5 rounded-full text-[11px] font-medium text-slate-300 shadow-inner">
-                <span class="relative flex h-2 w-2" id="status-dot">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span class="text-[11px] font-medium" id="status-text">Synchronisé</span>
-            </div>
-        </div>
 
-        <!-- Stats Rapides -->
-        <div class="grid grid-cols-3 gap-2 pt-1">
-            <div class="bg-slate-800/60 rounded-xl p-2 border border-slate-800 flex flex-col">
-                <span class="text-[10px] text-slate-400 font-medium">Tables</span>
-                <span class="text-xs font-bold text-slate-200 mt-0.5" id="stat-tables">4 Actives</span>
-            </div>
-            <div class="bg-amber-500/10 rounded-xl p-2 border border-amber-500/20 flex flex-col">
-                <span class="text-[10px] text-amber-300/80 font-medium">Parrains</span>
-                <span class="text-xs font-bold text-amber-400 mt-0.5" id="stat-parrains">-- / 4</span>
-            </div>
-            <div class="bg-emerald-500/10 rounded-xl p-2 border border-emerald-500/20 flex flex-col">
-                <span class="text-[10px] text-emerald-300/80 font-medium">Filleuls</span>
-                <span class="text-xs font-bold text-emerald-400 mt-0.5" id="stat-filleuls">-- / 16</span>
-            </div>
-        </div>
+            <!-- Ligne 2 : Statistiques & Filtres -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
+                    <div class="bg-slate-800/60 rounded-xl p-2.5 border border-slate-800 flex flex-col min-w-[100px]">
+                        <span class="text-[10px] text-slate-400 font-medium">Tables</span>
+                        <span class="text-sm font-bold text-slate-200 mt-0.5" id="stat-tables">4 Actives</span>
+                    </div>
+                    <div class="bg-amber-500/10 rounded-xl p-2.5 border border-amber-500/20 flex flex-col min-w-[100px]">
+                        <span class="text-[10px] text-amber-300/80 font-medium">Parrains</span>
+                        <span class="text-sm font-bold text-amber-400 mt-0.5" id="stat-parrains">-- / 4</span>
+                    </div>
+                    <div class="bg-emerald-500/10 rounded-xl p-2.5 border border-emerald-500/20 flex flex-col min-w-[100px]">
+                        <span class="text-[10px] text-emerald-300/80 font-medium">Filleuls</span>
+                        <span class="text-sm font-bold text-emerald-400 mt-0.5" id="stat-filleuls">-- / 16</span>
+                    </div>
+                </div>
 
-        <!-- Filtres -->
-        <div class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar pt-3 mt-1 pb-1">
-            <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-indigo-600 text-white shadow-sm shadow-indigo-600/30" id="tab-all" onclick="changerFiltre('all')">Toutes (4)</button>
-            <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-0" onclick="changerFiltre(0)">Table 1</button>
-            <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-1" onclick="changerFiltre(1)">Table 2</button>
-            <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-2" onclick="changerFiltre(2)">Table 3</button>
-            <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-3" onclick="changerFiltre(3)">Table 4</button>
+                <!-- Filtres -->
+                <div class="flex items-center gap-1.5 overflow-x-auto hide-scrollbar w-full md:w-auto pb-1 md:pb-0">
+                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-indigo-600 text-white shadow-sm shadow-indigo-600/30" id="tab-all" onclick="changerFiltre('all')">Toutes</button>
+                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-0" onclick="changerFiltre(0)">Table 1</button>
+                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-1" onclick="changerFiltre(1)">Table 2</button>
+                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-2" onclick="changerFiltre(2)">Table 3</button>
+                    <button class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/60 hover:bg-slate-800 border border-slate-800 whitespace-nowrap transition-all" id="tab-3" onclick="changerFiltre(3)">Table 4</button>
+                </div>
+            </div>
         </div>
     </header>
 
-    <!-- Contenu Principal -->
-    <main class="flex-1 px-3.5 py-4 space-y-4 overflow-y-auto">
+    <!-- Contenu Principal (Grille Responsive) -->
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
         
-        <div class="bg-gradient-to-r from-indigo-950/50 via-slate-800/40 to-slate-900 border border-indigo-500/20 rounded-2xl p-3 flex items-start gap-2.5 shadow-sm">
-            <div class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 shrink-0 mt-0.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        <!-- Info -->
+        <div class="bg-gradient-to-r from-indigo-950/50 via-slate-800/40 to-slate-900 border border-indigo-500/20 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+            <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
             </div>
-            <div class="text-[12px] leading-relaxed text-slate-300">
+            <div class="text-sm leading-relaxed text-slate-300">
                 Touchez le <strong class="text-amber-400 font-semibold">Parrain central</strong> ou un des 4 emplacements de <strong class="text-emerald-400 font-semibold">Filleul</strong> pour attribuer ou mettre à jour un affilié.
             </div>
         </div>
 
-        <!-- Conteneur des Tables -->
-        <div class="space-y-6" id="conteneur-tables">
-            <div class="flex flex-col items-center justify-center py-16 text-center text-slate-400 space-y-3">
-                <div class="relative w-10 h-10">
+        <!-- Grille des Tables (1 col mobile, 2 col tablette, 3+ col PC) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="conteneur-tables">
+            <div class="col-span-full flex flex-col items-center justify-center py-20 text-center text-slate-400 space-y-4">
+                <div class="relative w-12 h-12">
                     <div class="absolute inset-0 rounded-full border-2 border-indigo-500/20 animate-ping"></div>
-                    <div class="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div class="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <p class="text-xs font-medium tracking-wide text-slate-400">Chargement de la matrice...</p>
+                <p class="text-sm font-medium tracking-wide">Chargement de la matrice...</p>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="fixed bottom-0 max-w-[440px] w-full bg-slate-900/90 backdrop-blur-xl border-t border-slate-800 px-4 py-2 flex items-center justify-between text-[11px] text-slate-400 z-20">
-        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>Mode administrateur</span>
-        <button class="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 font-medium px-2 py-1 rounded-md hover:bg-slate-800 transition-colors" onclick="chargerDonnees()">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+    <footer class="fixed bottom-0 w-full bg-slate-900/90 backdrop-blur-xl border-t border-slate-800 px-4 md:px-8 py-3 flex items-center justify-between text-xs text-slate-400 z-20">
+        <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>Mode administrateur</span>
+        <button class="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-medium px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors" onclick="chargerDonnees()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
             Actualiser
         </button>
     </footer>
 </div>
 
-<!-- Modale (Bottom Sheet) -->
-<div class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-end justify-center z-50 animate-backdrop" id="modal" onclick="gererClicOverlay(event)">
-    <div class="bg-slate-900 border-t border-slate-700/80 rounded-t-[28px] w-full max-w-[440px] max-h-[90vh] overflow-y-auto shadow-sheet animate-sheet text-slate-100 flex flex-col" onclick="event.stopPropagation()">
-        <div class="pt-3 pb-1 flex justify-center"><div class="w-12 h-1.5 rounded-full bg-slate-700"></div></div>
+<!-- Modale (Bottom Sheet sur mobile, Centrée sur ordinateur) -->
+<div class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-end sm:items-center justify-center z-50 animate-backdrop" id="modal" onclick="gererClicOverlay(event)">
+    <div class="bg-slate-900 border-t sm:border border-slate-700/80 rounded-t-[28px] sm:rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-sheet animate-sheet text-slate-100 flex flex-col" onclick="event.stopPropagation()">
+        <div class="pt-3 pb-1 flex justify-center sm:hidden"><div class="w-12 h-1.5 rounded-full bg-slate-700"></div></div>
         
-        <div class="px-5 py-3 border-b border-slate-800 flex justify-between items-center">
-            <div class="font-semibold text-sm tracking-tight text-white flex items-center gap-2" id="modal-titre">Saisir une personne</div>
-            <button class="text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 p-1.5 rounded-full transition-colors" onclick="fermerModal()">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+            <div class="font-semibold text-base tracking-tight text-white flex items-center gap-2" id="modal-titre">Saisir une personne</div>
+            <button class="text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 p-2 rounded-full transition-colors" onclick="fermerModal()">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
             </button>
         </div>
 
-        <div class="p-5 space-y-4">
+        <div class="p-6 space-y-5">
             <div>
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
                         Identifiant Unique (ID) <span class="text-rose-400">*</span>
                     </label>
-                    <span class="text-[10px] text-slate-500 font-mono">Clé Firestore</span>
                 </div>
-                <input class="w-full bg-slate-800/90 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 font-mono tracking-wide focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" id="input-id" placeholder="Ex: ADH-2024-001" type="text"/>
-                <p class="text-[10px] text-slate-400 mt-1">L'ID est immuable une fois le membre créé.</p>
+                <input class="w-full bg-slate-800/90 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 font-mono tracking-wide focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" id="input-id" placeholder="Ex: ADH-2024-001" type="text"/>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Prénom <span class="text-rose-400">*</span></label>
-                    <input class="w-full bg-slate-800/90 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all capitalize" id="input-prenom" placeholder="Ex: Jean" type="text"/>
+                    <label class="block text-sm font-semibold text-slate-300 mb-2">Prénom <span class="text-rose-400">*</span></label>
+                    <input class="w-full bg-slate-800/90 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all capitalize" id="input-prenom" placeholder="Ex: Jean" type="text"/>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nom <span class="text-rose-400">*</span></label>
-                    <input class="w-full bg-slate-800/90 border border-slate-700 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" id="input-nom" placeholder="Ex: DUPONT" type="text"/>
+                    <label class="block text-sm font-semibold text-slate-300 mb-2">Nom <span class="text-rose-400">*</span></label>
+                    <input class="w-full bg-slate-800/90 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" id="input-nom" placeholder="Ex: DUPONT" type="text"/>
                 </div>
-            </div>
-
-            <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <div class="flex items-center gap-1.5 text-slate-300 font-medium">
-                    <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
-                    Règle de filiation
-                </div>
-                <p>Un parrain supervise jusqu'à 4 filleuls directs. Les commissions sont appliquées à la validation du cycle complet.</p>
             </div>
         </div>
 
-        <div class="p-5 pt-2 pb-8 bg-slate-900 border-t border-slate-800 flex flex-col gap-2.5">
-            <div class="flex items-center gap-2">
-                <button class="w-1/3 py-2.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700/80 rounded-xl transition-all border border-slate-700" onclick="fermerModal()" type="button">Annuler</button>
-                <button class="w-2/3 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 rounded-xl shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition-all" id="btn-enregistrer" onclick="validerSaisie()" type="button">Enregistrer</button>
+        <div class="p-6 pt-2 pb-6 bg-slate-900 border-t border-slate-800 flex flex-col gap-3 rounded-b-2xl">
+            <div class="flex items-center gap-3">
+                <button class="w-1/3 py-3 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700/80 rounded-xl transition-all border border-slate-700" onclick="fermerModal()" type="button">Annuler</button>
+                <button class="w-2/3 py-3 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 rounded-xl shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition-all" id="btn-enregistrer" onclick="validerSaisie()" type="button">Enregistrer</button>
             </div>
-            <button class="w-full py-2.5 text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition-colors hidden flex items-center justify-center gap-1.5" id="btn-supprimer" onclick="supprimerPersonne()" type="button">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <button class="w-full py-3 text-sm font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition-colors hidden flex items-center justify-center gap-2" id="btn-supprimer" onclick="supprimerPersonne()" type="button">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
                 Supprimer ce membre
             </button>
         </div>
@@ -308,30 +302,25 @@
         }
     }
 
-     function mettreAJourStats() {
-        // 1. Calculer le nombre de tables actives (comme dans afficherTables)
+    // LOGIQUE CORRIGÉE DES STATISTIQUES
+    function mettreAJourStats() {
         let maxTableId = -1;
         membresData.forEach(m => { 
             if (m.groupe_id > maxTableId) maxTableId = m.groupe_id; 
         });
-        const nombreDeTables = Math.max(4, maxTableId + 2); // On garde la même logique que l'affichage
+        const nombreDeTables = Math.max(4, maxTableId + 2);
 
-        // 2. Compter les membres actuels
         const nbParrains = membresData.filter(m => m.role === 'parrain').length;
         const nbFilleuls = membresData.filter(m => m.role === 'filleul').length;
 
-        // 3. Calculer les capacités maximales basées sur le nombre de tables
         const capaciteParrains = nombreDeTables;
         const capaciteFilleuls = nombreDeTables * 4;
 
-        // 4. Mettre à jour l'affichage
         const elT = document.getElementById('stat-tables');
         const elP = document.getElementById('stat-parrains');
         const elF = document.getElementById('stat-filleuls');
 
         if (elT) elT.textContent = `${nombreDeTables} Actives`;
-        
-        // On affiche "Actuel / Capacité Max"
         if (elP) elP.textContent = `${nbParrains} / ${capaciteParrains}`;
         if (elF) elF.textContent = `${nbFilleuls} / ${capaciteFilleuls}`;
     }
@@ -352,35 +341,25 @@
         afficherTables();
     }
 
-    // ==========================================
-    // AFFICHAGE DES TABLES (STYLE BLANC)
-       // ==========================================
-    // AFFICHAGE DES TABLES (DYNAMIQUE & AUTO-EXTENSION)
-    // ==========================================
+    // AFFICHAGE DYNAMIQUE
     function afficherTables() {
         const conteneur = document.getElementById('conteneur-tables');
         if (!conteneur) return;
         conteneur.innerHTML = '';
 
-        // 1. On cherche la table la plus haute qui existe dans la base de données
         let maxTableId = -1;
         membresData.forEach(m => { 
             if (m.groupe_id > maxTableId) maxTableId = m.groupe_id; 
         });
 
-        // 2. On calcule combien de tables afficher.
-        // On affiche toujours la dernière table + 1 (pour avoir une table vide prête à l'emploi)
         const nombreDeTablesAAfficher = Math.max(4, maxTableId + 2);
         
-        // On crée un tableau [0, 1, 2, 3, 4...] pour la boucle
         const tablesAAfficher = [];
         for (let i = 0; i < nombreDeTablesAAfficher; i++) {
-            tablesAAfficher.push(i);
+            if (filtreActuel === 'all' || parseInt(filtreActuel, 10) === i) {
+                tablesAAfficher.push(i);
+            }
         }
-
-        // Mise à jour du compteur de tables dans l'en-tête
-        const statTables = document.getElementById('stat-tables');
-        if (statTables) statTables.textContent = `${nombreDeTablesAAfficher} Actives`;
 
         tablesAAfficher.forEach((i) => {
             const parrain = membresData.find(m => m.groupe_id === i && m.role === 'parrain');
@@ -389,23 +368,21 @@
             );
             
             const tableCard = document.createElement('div');
-            tableCard.className = 'flex flex-col items-center mb-6'; 
+            tableCard.className = 'flex flex-col items-center bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 shadow-lg transition-all hover:border-slate-700'; 
 
             tableCard.innerHTML = `
-                <!-- Titre de la Table (Style Image) -->
-                <div class="flex items-center gap-2 mb-3">
+                <!-- Titre de la Table -->
+                <div class="flex items-center gap-2 mb-4 w-full">
                     <span class="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold">${i + 1}</span>
-                    <h2 class="text-sm font-bold text-slate-600 uppercase tracking-wide">Table ${i + 1}</h2>
+                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wide">Table ${i + 1}</h2>
                 </div>
 
                 <!-- Le Bloc Blanc de la Matrice -->
-                <div class="w-full max-w-[320px] bg-white border border-slate-200 rounded-xl shadow-sm p-2">
+                <div class="w-full bg-white border border-slate-200 rounded-xl shadow-sm p-2">
                     <div class="matrix-container">
-                        <!-- Lignes de la croix -->
                         <div class="matrix-line-h"></div>
                         <div class="matrix-line-v"></div>
 
-                        <!-- 4 Filleuls autour -->
                         <div class="matrix-cell cell-tl" onclick="ouvrirModal(${i}, 'filleul', 0)">
                             ${filleuls[0] ? renderFilleul(filleuls[0]) : renderEmptyFilleul(0)}
                         </div>
@@ -419,7 +396,6 @@
                             ${filleuls[3] ? renderFilleul(filleuls[3]) : renderEmptyFilleul(3)}
                         </div>
 
-                        <!-- Parrain Centre -->
                         <div class="matrix-center ${parrain ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30'}" 
                              onclick="ouvrirModal(${i}, 'parrain', null)">
                             ${parrain ? renderParrain(parrain) : renderEmptyParrain()}
@@ -430,8 +406,8 @@
             conteneur.appendChild(tableCard);
         });
     }
-    // --- RENDU DES CARTES ---
 
+    // --- RENDU DES CARTES ---
     function renderParrain(personne) {
         return `
             <div class="flex flex-col items-center justify-center w-full px-2">
@@ -461,7 +437,6 @@
         `;
     }
 
-    // Modification ici pour afficher le numéro du filleul
     function renderEmptyFilleul(pos) {
         return `
             <div class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-emerald-500 transition-colors">
