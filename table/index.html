@@ -335,13 +335,33 @@
 
     // ==========================================
     // AFFICHAGE DES TABLES (STYLE BLANC)
+       // ==========================================
+    // AFFICHAGE DES TABLES (DYNAMIQUE & AUTO-EXTENSION)
     // ==========================================
     function afficherTables() {
         const conteneur = document.getElementById('conteneur-tables');
         if (!conteneur) return;
         conteneur.innerHTML = '';
 
-        const tablesAAfficher = filtreActuel === 'all' ? [0, 1, 2, 3] : [parseInt(filtreActuel, 10)];
+        // 1. On cherche la table la plus haute qui existe dans la base de données
+        let maxTableId = -1;
+        membresData.forEach(m => { 
+            if (m.groupe_id > maxTableId) maxTableId = m.groupe_id; 
+        });
+
+        // 2. On calcule combien de tables afficher.
+        // On affiche toujours la dernière table + 1 (pour avoir une table vide prête à l'emploi)
+        const nombreDeTablesAAfficher = Math.max(4, maxTableId + 2);
+        
+        // On crée un tableau [0, 1, 2, 3, 4...] pour la boucle
+        const tablesAAfficher = [];
+        for (let i = 0; i < nombreDeTablesAAfficher; i++) {
+            tablesAAfficher.push(i);
+        }
+
+        // Mise à jour du compteur de tables dans l'en-tête
+        const statTables = document.getElementById('stat-tables');
+        if (statTables) statTables.textContent = `${nombreDeTablesAAfficher} Actives`;
 
         tablesAAfficher.forEach((i) => {
             const parrain = membresData.find(m => m.groupe_id === i && m.role === 'parrain');
@@ -391,7 +411,6 @@
             conteneur.appendChild(tableCard);
         });
     }
-
     // --- RENDU DES CARTES ---
 
     function renderParrain(personne) {
